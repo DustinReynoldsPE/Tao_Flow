@@ -9,11 +9,14 @@ pub mod config;
 pub mod confluence;
 pub mod creation;
 pub mod error;
+pub mod flow;
+pub mod provider;
 pub mod still_lake;
 pub mod water;
 pub mod watershed;
 
 pub use error::FlowError;
+pub use flow::TaoFlow;
 pub use water::{Ocean, Rain, River, Stream, Vapor};
 
 #[cfg(test)]
