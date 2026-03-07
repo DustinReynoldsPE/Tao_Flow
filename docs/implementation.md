@@ -888,26 +888,75 @@ springs:
 
 Start small. Like a spring emerging from rock.
 
-**Phase 1: The Vessel**
-Set up the Rust project. Define the water types. Implement the `Spring` trait. Write the first tests. The compiler will be your first teacher -- submit to its discipline. `cargo test` should pass with green before any LLM is called.
+All work flows through branches. Main is the ocean floor -- stable, settled, tested. Each feature emerges as a branch, is refined through PR review, and merges only when clear. Use `/flow` to guide the full cycle.
+
+**Phase 1: The Vessel** *(complete)*
+Set up the Rust project. Define the water types. Implement the `Spring` trait. Write the first tests. The compiler is the first master. `cargo test` passes green. CI enforces the riverbanks on every push. Skills are defined: `/riverbank`, `/spring`, `/vessel`, `/still-lake`, `/rain`, `/confluence`, `/flow`.
 
 **Phase 2: Two Springs**
-Begin with Mountain (Claude Opus) and Desert (Claude Haiku). This gives depth and speed. No Confluence needed yet -- when only two springs flow, the merging is simple. Test that rain flows to ocean through both paths.
+Begin with Mountain (Claude Opus) and Desert (Claude Haiku). This gives depth and speed. No Confluence needed yet -- when only two springs flow, the merging is simple. Use `/spring mountain` and `/spring desert` to scaffold. Test that rain flows to ocean through both paths.
 
 **Phase 3: Add the Confluence**
-Add the Forest Spring. Now three streams can diverge. The Confluence Pool becomes necessary. Implement the basic merging logic. Write integration tests that verify three streams merge into one river.
+Add the Forest Spring (`/spring forest`). Now three streams can diverge. The Confluence Pool becomes necessary. Implement the basic merging logic. Use `/vessel confluence/pool` to scaffold. Write integration tests that verify three streams merge into one river. Use `/confluence` to review the integration.
 
 **Phase 4: Add Yielding**
-When real eddies emerge, implement the Yielding protocol. This is where the system's true nature begins to manifest. Property-based tests verify that yielding always produces resolution.
+When real eddies emerge, implement the Yielding protocol (`/vessel confluence/yielding`). This is where the system's true nature begins to manifest. Property-based tests verify that yielding always produces resolution. Use `/still-lake` to review the protocol for the five qualities.
 
 **Phase 5: The Still Lake**
-Add the final refinement pass. The system now flows from Rain to Ocean through all phases. Integration tests verify the full journey.
+Add the final refinement pass (`/vessel still_lake/lake`). The system now flows from Rain to Ocean through all phases. Integration tests verify the full journey. Use `/rain suite` to watch water flow through every stage.
 
 **Phase 6: Creation Flows**
-Implement the specialized creation flows for books, podcasts, and software. Each builds on the core watershed. Test that created software contains its own tests -- the recursive riverbank.
+Implement the specialized creation flows for books, podcasts, and software. Each builds on the core watershed. Test that created software contains its own tests -- the recursive riverbank. New skills may emerge as creation patterns solidify.
 
 **Phase 7: The Storm**
 Implement recursive flow -- the ability for water to cycle back through the watershed for transformative requests. Property-based tests verify that storms always eventually reach the ocean.
+
+---
+
+## Skills: Teaching the Builder
+
+*"So find a teacher who is an integral being, a beacon who extends his light and virtue with equal ease to those who appreciate him and those who don't."*
+*-- Hua Hu Ching, Chapter 75*
+
+The system teaches its builders through skills -- slash commands that embody the Tao's principles while guiding real development workflows. Each skill is a small master, carrying one aspect of the practice. They live in `.claude/commands/` and are invoked as `/skill-name`.
+
+### The Seven Skills
+
+| Skill | The Water | Purpose |
+|-------|-----------|---------|
+| `/riverbank` | The banks that hold the river | Run all quality checks: `fmt`, `clippy`, `test`. The CI gate, locally. |
+| `/spring <name>` | A new source of water | Scaffold a new Spring (LLM adapter) with trait impl, config, and tests. |
+| `/vessel <path>` | The empty pot | Scaffold a new module with structure, docs, tests, and module registration. |
+| `/still-lake <target>` | Clarity through stillness | Code review through the five questions: clarity, wholeness, kindness, truth, simplicity. |
+| `/rain <input>` | Water falling on the watershed | Test input flow -- observe how rain would travel through the system. |
+| `/confluence [branch]` | Where streams merge | Review and integrate changes, identifying agreements, enrichments, and eddies. |
+| `/flow <description>` | The complete journey | Full dev cycle: branch, implement, test, review, PR. Rain to ocean. |
+
+### How Skills Grow
+
+Skills are not static. As the system evolves, new skills emerge naturally:
+
+- When a pattern repeats three times, it may want to become a skill
+- When a phase is complete, its scaffolding skill may retire or transform
+- When builders struggle with a workflow, a skill can smooth the path
+
+Skills follow the same principle as the system itself: they should do nothing unnecessary, yet leave nothing undone. A skill that tries too hard is worse than no skill at all.
+
+### The Branch Discipline
+
+All development flows through branches. Main is the ocean floor -- stable, settled, tested.
+
+```
+main (stable)
+  |
+  +-- feature/two-springs       (Phase 2)
+  +-- feature/confluence-pool   (Phase 3)
+  +-- feature/yielding          (Phase 4)
+  +-- skills/new-skill-name     (skill additions)
+  +-- fix/eddy-description      (bug fixes)
+```
+
+The `/flow` skill enforces this discipline: it creates branches, guides implementation, runs quality checks, and produces PRs. It never pushes directly to main.
 
 ---
 
