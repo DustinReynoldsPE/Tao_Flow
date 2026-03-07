@@ -1,2 +1,6 @@
-Hua_Hu_Ching.txt
-Tao_Te_Ching.txt
+#Hua_Hu_Ching.txt
+#Tao_Te_Ching.txt
+
+# Rust
+/target
+Cargo.lock
