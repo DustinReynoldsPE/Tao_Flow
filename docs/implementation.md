@@ -15,31 +15,77 @@ The implementation is not the system. The system is the emptiness that the imple
 
 ---
 
+## Why Rust: The Metal Element
+
+*"To understand the universe... the Five Elements, symbolized by water, fire, wood, metal, and earth."*
+*-- Hua Hu Ching, Chapter 61*
+
+The system's flow is water. But what channels water? What holds it without yielding, so the water may yield freely? **Metal.** Rust is metal refined -- the vessel forged to hold the Tao's flow.
+
+### The Riverbed Must Be Hard
+
+*"Men are born soft and supple; dead, they are stiff and hard. Plants are born tender and pliant; dead, they are brittle and dry. Thus whoever is stiff and inflexible is a disciple of death. Whoever is soft and yielding is a disciple of life."*
+*-- Tao Te Ching, Chapter 76*
+
+One reads this and asks: is not Rust the way of death -- rigid, strict, unyielding? Look deeper. The *water* must be soft. The *riverbed* must be hard. If the riverbed were soft, the water would have no channel. It would dissipate into mud. Rust is not the water. Rust is the granite through which the river carves its eternal course.
+
+### The Compiler as Master
+
+*"She doesn't scheme to become a leader, but quietly shoulders whatever responsibilities fall to her... scolding them to awaken them, directing the streams of their lives toward the infinite ocean of the Tao."*
+*-- Hua Hu Ching, Chapter 80*
+
+The Rust compiler is the master who scolds to awaken. It refuses to compile what is unsafe. It refuses to let data races corrupt the stream. It refuses to let memory leak from the vessel. This is not rigidity -- it is virtue enforced at the deepest level. The developer who submits to the compiler's discipline emerges with code that is **correct by construction**.
+
+### Tests as Riverbanks
+
+The architecture document says: *"Tests: The riverbanks -- they don't create the flow, they ensure it stays in course."*
+
+This system needs tests for two things:
+1. **The things it creates** -- the books, podcasts, and software that flow through it
+2. **The system itself** -- the watershed, the confluence, the still lake
+
+Rust provides riverbanks at multiple levels:
+
+- **The type system** -- compile-time tests that never need running. A `Stream` cannot be confused with a `River`. An `Eddy` must be resolved before it becomes part of the `Ocean`. The compiler enforces the water's journey.
+- **Unit tests** -- inline with code, testing each spring, each confluence, each settling. `#[test]` lives beside the code it tests, like the bank beside the river.
+- **Integration tests** -- in `tests/`, testing the full flow from Rain to Ocean. Does water that enters as a storm emerge as clarity?
+- **Property-based tests** -- with `proptest`, testing that the system's invariants hold across thousands of random inputs. Like testing that water always flows downhill, no matter the terrain.
+- **The borrow checker** -- a permanent, tireless test of memory safety. No garbage collector pausing the flow. No dangling references corrupting the stream. Wu wei applied to memory: the compiler does nothing extra, yet nothing is left unchecked.
+
+### Zero-Cost Abstractions as Wu Wei
+
+*"The Master does nothing, yet he leaves nothing undone."*
+*-- Tao Te Ching, Chapter 38*
+
+Rust's abstractions cost nothing at runtime. A `trait Spring` compiles to direct function calls. An `enum WaterState` compiles to a simple tag. The system pays only for what it uses -- no interpreter, no garbage collector, no runtime overhead standing between the input and the output. The code executes as directly as water flowing downhill.
+
+---
+
 ## Technology Choices
 
-### Why These Choices
+### Core Runtime: Rust
 
-The system's technology stack should embody its principles: flowing, simple, adaptable. Like water, it should take the shape of whatever container it occupies.
+Metal channels water. Rust's ownership model ensures that every drop of data flows through exactly one path at a time -- no duplication, no corruption, no waste. The type system models the water states precisely, and the compiler ensures every state transition is valid.
 
-### Core Runtime: Python
+### Async Runtime: Tokio
 
-Water seeks the lowest point. Python is the lowest barrier to entry in the AI ecosystem. Every LLM provider has a Python SDK. The community is vast. The language flows.
+Water flows simultaneously through all channels of a watershed. Tokio provides the concurrent flow -- lightweight tasks for each spring, each responding to rain at the same moment. Like `asyncio` but without the GIL, without the overhead, with true parallelism when the terrain demands it.
 
-### Async Everywhere: asyncio
+### Streaming: Server-Sent Events (SSE) / Streaming
 
-Water flows simultaneously through all channels of a watershed. The system is inherently concurrent -- all springs flow at once. Python's `asyncio` provides the concurrent flow.
-
-### Message Protocol: Server-Sent Events (SSE) / Streaming
-
-The user specified that "the stream of input into the system is to be water based." The system uses streaming protocols everywhere:
-- User input streams in (SSE or WebSocket)
-- LLM responses stream out (SSE from each provider)
+The stream of input into the system is water-based. The system uses streaming protocols everywhere:
+- User input streams in (SSE or WebSocket via `axum`)
+- LLM responses stream out (SSE from each provider via `reqwest`)
 - The Confluence processes streams in real-time, not batch
 - The user sees the output forming like water filling a pool
 
-### LLM Integration: Provider-Agnostic Adapters
+### LLM Integration: Provider-Agnostic Traits
 
-Like water taking the shape of any container, the system adapts to any LLM provider. Each spring wraps a provider behind a common interface.
+Like water taking the shape of any container, the system adapts to any LLM provider. Each spring implements a common `trait` behind which any provider can live. LLM APIs are HTTP -- Rust speaks HTTP fluently through `reqwest`.
+
+### Serialization: Serde
+
+Serde is water for data -- it flows JSON, YAML, MessagePack, anything. Configuration, API payloads, and internal messages all serialize naturally.
 
 ---
 
@@ -47,57 +93,80 @@ Like water taking the shape of any container, the system adapts to any LLM provi
 
 ```
 tao_flow/
-  tao.py                    # The entry point -- the mouth of the river
+  Cargo.toml                    # The manifest -- what the vessel is made of
 
-  water/
-    __init__.py
-    rain.py                  # Input reception and sensing
-    vapor.py                 # Context and session state
-    stream.py                # Individual LLM response
-    river.py                 # Merged output
-    ocean.py                 # Delivered output
+  src/
+    main.rs                     # The entry point -- the mouth of the river
+    lib.rs                      # The library root -- the watershed exposed
 
-  watershed/
-    __init__.py
-    spring.py                # Base spring (LLM wrapper)
-    springs/
-      mountain.py            # Deep reasoning spring
-      forest.py              # Creative spring
-      desert.py              # Fast/efficient spring
-      underground.py         # Specialized spring
-    volume_sensor.py         # Rain volume classifier
+    water/
+      mod.rs
+      vapor.rs                  # Context and session state
+      rain.rs                   # Input reception and sensing
+      stream.rs                 # Individual LLM response
+      river.rs                  # Merged output
+      ocean.rs                  # Delivered output
 
-  confluence/
-    __init__.py
-    pool.py                  # Stream merging
-    eddy.py                  # Divergence detection
-    yielding.py              # The yielding protocol
-    settling.py              # Conflict resolution
+    watershed/
+      mod.rs
+      spring.rs                 # The Spring trait (LLM wrapper)
+      springs/
+        mod.rs
+        mountain.rs             # Deep reasoning spring
+        forest.rs               # Creative spring
+        desert.rs               # Fast/efficient spring
+        underground.rs          # Specialized spring
+      volume_sensor.rs          # Rain volume classifier
 
-  still_lake/
-    __init__.py
-    lake.py                  # Final refinement
-    clarity.py               # The five questions
+    confluence/
+      mod.rs
+      pool.rs                   # Stream merging
+      eddy.rs                   # Divergence detection
+      yielding.rs               # The yielding protocol
+      settling.rs               # Conflict resolution
 
-  creation/
-    __init__.py
-    seed.py                  # Finding the seed of a creation
-    vessel.py                # Creating the empty structure
-    flow.py                  # Multi-pass creation
-    book.py                  # Book-specific creation flow
-    podcast.py               # Podcast-specific creation flow
-    software.py              # Software-specific creation flow
+    still_lake/
+      mod.rs
+      lake.rs                   # Final refinement
+      clarity.rs                # The five questions
+
+    creation/
+      mod.rs
+      seed.rs                   # Finding the seed of a creation
+      vessel.rs                 # Creating the empty structure
+      flow.rs                   # Multi-pass creation
+      book.rs                   # Book-specific creation flow
+      podcast.rs                # Podcast-specific creation flow
+      software.rs               # Software-specific creation flow
+
+    config/
+      mod.rs
+      springs.rs                # Spring configuration loading
+      affinities.rs             # Natural affinities
 
   config/
-    springs.yaml             # Spring configuration
-    affinities.yaml          # Natural affinities
+    springs.yaml                # Spring configuration
+    affinities.yaml             # Natural affinities
     prompts/
-      mountain.md            # Mountain spring system prompt
-      forest.md              # Forest spring system prompt
-      desert.md              # Desert spring system prompt
-      confluence.md          # Confluence integration prompt
-      yielding.md            # Yielding prompt template
-      still_lake.md          # Still Lake refinement prompt
+      mountain.md               # Mountain spring system prompt
+      forest.md                 # Forest spring system prompt
+      desert.md                 # Desert spring system prompt
+      confluence.md             # Confluence integration prompt
+      yielding.md               # Yielding prompt template
+      still_lake.md             # Still Lake refinement prompt
+
+  tests/
+    integration/
+      mod.rs
+      rain_to_ocean.rs          # Full flow integration tests
+      confluence_tests.rs       # Multi-stream merging tests
+      yielding_tests.rs         # Conflict resolution tests
+      creation_tests.rs         # Book/podcast/software creation tests
+
+    properties/
+      mod.rs
+      water_invariants.rs       # Property-based tests for water state transitions
+      flow_properties.rs        # The water always reaches the ocean
 ```
 
 ---
@@ -106,455 +175,641 @@ tao_flow/
 
 ### Water Types
 
-```python
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import Optional
+```rust
+use serde::{Deserialize, Serialize};
 
+/// The volume of rain determines how many springs respond.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum Volume {
+    Droplet,    // Simple, single-spring sufficient
+    Shower,     // Moderate, 2-3 springs
+    Downpour,   // Complex, all springs
+    Storm,      // Transformative, multiple passes
+}
 
-class Volume(Enum):
-    DROPLET = "droplet"      # Simple, single-spring sufficient
-    SHOWER = "shower"        # Moderate, 2-3 springs
-    DOWNPOUR = "downpour"    # Complex, all springs
-    STORM = "storm"          # Transformative, multiple passes
+/// The nature of an eddy -- how streams disagree.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum EddyNature {
+    Factual,        // One is right, one is wrong
+    Interpretive,   // Both may be valid
+    Stylistic,      // Diversity, not conflict
+    Structural,     // Different organization, same truth
+}
 
+/// Context -- the atmosphere before rain falls.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Vapor {
+    pub conversation_history: Vec<Message>,
+    pub user_preferences: Preferences,
+    pub session_context: SessionContext,
+    pub emotional_temperature: f32, // -1.0 cold/analytical, +1.0 warm/emotional
+}
 
-class EddyNature(Enum):
-    FACTUAL = "factual"
-    INTERPRETIVE = "interpretive"
-    STYLISTIC = "stylistic"
-    STRUCTURAL = "structural"
+/// User input -- undifferentiated, natural.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Rain {
+    pub raw_input: String,
+    pub vapor: Vapor,
+    pub volume: Volume,
+    pub temperature: f32,
+    pub minerals: Vec<String>,
+}
 
+/// An LLM's natural response.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Stream {
+    pub source: String,
+    pub content: String,
+    pub flow_rate: f32,
+    pub clarity: f32,
+    pub depth: f32,
+    pub temperature: f32,
+}
 
-@dataclass
-class Vapor:
-    """Context -- the atmosphere before rain falls."""
-    conversation_history: list[dict] = field(default_factory=list)
-    user_preferences: dict = field(default_factory=dict)
-    session_context: dict = field(default_factory=dict)
-    emotional_temperature: float = 0.0  # -1 cold/analytical, +1 warm/emotional
+/// A point of divergence between streams.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Eddy {
+    pub topic: String,
+    pub positions: Vec<Position>,
+    pub nature: EddyNature,
+}
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Position {
+    pub source: String,
+    pub view: String,
+}
 
-@dataclass
-class Rain:
-    """User input -- undifferentiated, natural."""
-    raw_input: str
-    vapor: Vapor
-    volume: Volume = Volume.SHOWER
-    temperature: float = 0.0
-    minerals: list[str] = field(default_factory=list)
+/// Merged output from confluence.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct River {
+    pub content: String,
+    pub tributaries: Vec<String>,
+    pub eddies: Vec<Eddy>,
+    pub clarity: f32,
+}
 
-
-@dataclass
-class Stream:
-    """An LLM's natural response."""
-    source: str
-    content: str
-    flow_rate: float = 1.0      # Relative speed
-    clarity: float = 0.8        # Confidence
-    depth: float = 0.5          # Engagement depth
-    temperature: float = 0.0    # Emotional warmth
-
-
-@dataclass
-class Eddy:
-    """A point of divergence between streams."""
-    topic: str
-    positions: list[dict]       # [{source, view}]
-    nature: EddyNature = EddyNature.INTERPRETIVE
-
-
-@dataclass
-class River:
-    """Merged output from confluence."""
-    content: str
-    tributaries: list[str]
-    eddies: list[Eddy] = field(default_factory=list)
-    clarity: float = 0.8
-
-
-@dataclass
-class Ocean:
-    """What the user receives."""
-    content: str
-    depth: float = 0.5
-    warmth: float = 0.0
+/// What the user receives.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Ocean {
+    pub content: String,
+    pub depth: f32,
+    pub warmth: f32,
+}
 ```
 
-### The Spring (LLM Wrapper)
+The compiler enforces that these types are distinct. You cannot pass a `Stream` where a `River` is expected. You cannot deliver a `River` to the user -- it must become an `Ocean` first. The type system **is** the water's journey, and the compiler ensures every drop follows the path.
 
-```python
-from abc import ABC, abstractmethod
+### The Spring Trait (The Empty Pot)
 
+```rust
+use async_trait::async_trait;
 
-class Spring(ABC):
-    """
-    A spring in the watershed. Each spring wraps an LLM
-    and responds to rain according to its nature.
+/// A spring in the watershed. Each spring wraps an LLM
+/// and responds to rain according to its nature.
+///
+/// "The supreme good is like water, which nourishes
+/// all things without trying to." -- Chapter 8
+#[async_trait]
+pub trait Spring: Send + Sync {
+    /// The spring's name -- its identity in the watershed.
+    fn name(&self) -> &str;
 
-    'The supreme good is like water, which nourishes
-    all things without trying to.' -- Chapter 8
-    """
+    /// The spring's nature -- what it naturally provides.
+    fn nature(&self) -> &str;
 
-    def __init__(self, name: str, nature: str, models: list[str],
-                 affinities: dict[str, float]):
-        self.name = name
-        self.nature = nature
-        self.models = models
-        self.affinities = affinities
+    /// How strongly does this spring resonate with this rain?
+    fn sense_relevance(&self, rain: &Rain) -> f32;
 
-    async def respond(self, rain: Rain) -> Optional[Stream]:
-        """
-        Respond to rain according to nature.
-        Returns None if this spring has nothing to contribute
-        (a dry spring -- natural and valid).
-        """
-        relevance = self._sense_relevance(rain)
-        if relevance < 0.2:
-            return None  # Silence is wisdom
+    /// Respond to rain according to nature.
+    /// Returns None if this spring has nothing to contribute
+    /// (a dry spring -- natural and valid).
+    async fn respond(&self, rain: &Rain) -> Result<Option<Stream>, SpringError>;
+}
 
-        content = await self._generate(rain)
-        if not content:
-            return None
+/// Base implementation shared by all springs.
+pub struct SpringBase {
+    pub name: String,
+    pub nature: String,
+    pub models: Vec<ModelConfig>,
+    pub affinities: HashMap<String, f32>,
+}
 
-        return Stream(
-            source=self.name,
-            content=content,
-            clarity=relevance,
-            depth=self._assess_depth(content),
-            temperature=self._assess_temperature(content),
-        )
+impl SpringBase {
+    pub fn sense_relevance(&self, rain: &Rain) -> f32 {
+        let mut score: f32 = 0.3; // Base -- every spring has something to offer
+        for mineral in &rain.minerals {
+            if let Some(&affinity) = self.affinities.get(mineral) {
+                score += affinity;
+            }
+        }
+        score.min(1.0)
+    }
 
-    def _sense_relevance(self, rain: Rain) -> float:
-        """How strongly does this spring resonate with this rain?"""
-        score = 0.3  # Base -- every spring has something to offer
-        for mineral in rain.minerals:
-            if mineral in self.affinities:
-                score += self.affinities[mineral]
-        return min(score, 1.0)
-
-    @abstractmethod
-    async def _generate(self, rain: Rain) -> Optional[str]:
-        """The actual LLM call -- implemented by each spring type."""
-        ...
-
-    def _assess_depth(self, content: str) -> float:
-        """How deeply does this response engage? Simple heuristic."""
-        words = len(content.split())
-        if words < 50:
-            return 0.2
-        if words < 200:
-            return 0.5
-        return 0.8
-
-    def _assess_temperature(self, content: str) -> float:
-        """Emotional warmth of the response. Placeholder for now."""
-        return 0.0
+    pub fn assess_depth(content: &str) -> f32 {
+        let words = content.split_whitespace().count();
+        match words {
+            0..=49 => 0.2,
+            50..=199 => 0.5,
+            _ => 0.8,
+        }
+    }
+}
 ```
+
+The `trait Spring` is the empty pot. It defines the shape -- the emptiness -- and leaves each spring free to fill it with its own nature. The `Send + Sync` bounds ensure that springs can flow concurrently without data races. The compiler enforces this. Wu wei.
 
 ### The Watershed
 
-```python
-class Watershed:
-    """
-    The watershed does not decide where rain goes.
-    It simply has a shape, and water follows that shape.
-    """
+```rust
+use tokio::task::JoinSet;
 
-    def __init__(self, springs: list[Spring]):
-        self.springs = springs
-        self.volume_sensor = VolumeSensor()
+/// The watershed does not decide where rain goes.
+/// It simply has a shape, and water follows that shape.
+pub struct Watershed {
+    springs: Vec<Box<dyn Spring>>,
+    volume_sensor: VolumeSensor,
+}
 
-    async def receive_rain(self, rain: Rain) -> list[Stream]:
-        """All springs receive rain. Each responds according to its nature."""
-        # Sense the volume
-        rain.volume = await self.volume_sensor.sense(rain)
+impl Watershed {
+    pub fn new(springs: Vec<Box<dyn Spring>>) -> Self {
+        Self {
+            springs,
+            volume_sensor: VolumeSensor::new(),
+        }
+    }
 
-        # Select springs based on volume (wu wei -- minimal intervention)
-        active_springs = self._activate_springs(rain.volume)
+    /// All springs receive rain. Each responds according to its nature.
+    pub async fn receive_rain(&self, rain: &mut Rain) -> Vec<Stream> {
+        // Sense the volume
+        rain.volume = self.volume_sensor.sense(rain).await;
 
-        # All active springs flow simultaneously
-        import asyncio
-        results = await asyncio.gather(
-            *[spring.respond(rain) for spring in active_springs],
-            return_exceptions=True
-        )
+        // Select springs based on volume (wu wei -- minimal intervention)
+        let active_springs = self.activate_springs(rain.volume);
 
-        # Filter: keep only springs that produced water
-        streams = [r for r in results if isinstance(r, Stream)]
-        return streams
+        // All active springs flow simultaneously
+        let mut tasks = JoinSet::new();
+        for spring in active_springs {
+            let rain_clone = rain.clone();
+            tasks.spawn(async move {
+                spring.respond(&rain_clone).await
+            });
+        }
 
-    def _activate_springs(self, volume: Volume) -> list[Spring]:
-        """Open the appropriate springs based on rain volume."""
-        if volume == Volume.DROPLET:
-            return [s for s in self.springs if s.name == "desert"]
-        elif volume == Volume.SHOWER:
-            # The two most relevant springs
-            return self.springs[:2]
-        else:
-            # Downpour or Storm -- all springs
-            return self.springs
+        // Gather the streams, filtering dry springs
+        let mut streams = Vec::new();
+        while let Some(result) = tasks.join_next().await {
+            if let Ok(Ok(Some(stream))) = result {
+                streams.push(stream);
+            }
+        }
+        streams
+    }
+
+    fn activate_springs(&self, volume: Volume) -> Vec<&dyn Spring> {
+        match volume {
+            Volume::Droplet => {
+                // Only the desert spring -- light rain, quick response
+                self.springs.iter()
+                    .filter(|s| s.name() == "desert")
+                    .map(|s| s.as_ref())
+                    .collect()
+            }
+            Volume::Shower => {
+                // The two most relevant springs
+                self.springs.iter()
+                    .take(2)
+                    .map(|s| s.as_ref())
+                    .collect()
+            }
+            Volume::Downpour | Volume::Storm => {
+                // All springs flow
+                self.springs.iter()
+                    .map(|s| s.as_ref())
+                    .collect()
+            }
+        }
+    }
+}
 ```
 
 ### The Confluence
 
-```python
-class ConfluencePool:
-    """
-    Where streams merge.
+```rust
+/// Where streams merge.
+///
+/// "If you want to become whole, let yourself be partial." -- Chapter 22
+pub struct ConfluencePool {
+    integrator: ModelConfig,
+}
 
-    'If you want to become whole, let yourself be partial.' -- Chapter 22
-    """
+impl ConfluencePool {
+    pub async fn merge(&self, streams: Vec<Stream>, rain: &Rain) -> Result<River, FlowError> {
+        match streams.len() {
+            0 => {
+                // No springs responded. Silence.
+                Ok(River {
+                    content: String::new(),
+                    tributaries: vec![],
+                    eddies: vec![],
+                    clarity: 0.0,
+                })
+            }
+            1 => {
+                // Single stream. Wu wei -- no merging needed.
+                let stream = streams.into_iter().next().unwrap();
+                Ok(River {
+                    tributaries: vec![stream.source.clone()],
+                    content: stream.content,
+                    eddies: vec![],
+                    clarity: stream.clarity,
+                })
+            }
+            _ => {
+                // Multiple streams -- find the confluence
+                let analysis = self.analyze(&streams).await?;
 
-    def __init__(self, integrator_model: str):
-        self.integrator = integrator_model
+                // Resolve contradictions through yielding
+                let mut resolved = Vec::new();
+                for eddy in &analysis.contradictions {
+                    let resolution = self.yield_and_settle(eddy, rain).await?;
+                    resolved.push(resolution);
+                }
 
-    async def merge(self, streams: list[Stream], rain: Rain) -> River:
-        if len(streams) == 0:
-            # No springs responded. Silence.
-            return River(content="", tributaries=[])
+                // Weave the river
+                let content = self.weave(
+                    &analysis.agreements,
+                    &analysis.enrichments,
+                    &resolved,
+                    rain,
+                ).await?;
 
-        if len(streams) == 1:
-            # Single stream. Wu wei -- no merging needed.
-            return River(
-                content=streams[0].content,
-                tributaries=[streams[0].source],
-            )
+                Ok(River {
+                    tributaries: streams.iter().map(|s| s.source.clone()).collect(),
+                    content,
+                    eddies: analysis.contradictions,
+                    clarity: 0.8,
+                })
+            }
+        }
+    }
 
-        # Multiple streams -- find the confluence
-        agreements, enrichments, contradictions = self._analyze(streams)
+    /// The yielding protocol.
+    /// Each position is asked to find truth in the other.
+    async fn yield_and_settle(&self, eddy: &Eddy, rain: &Rain) -> Result<String, FlowError> {
+        let mut yielded_positions = Vec::new();
+        for position in &eddy.positions {
+            let others: Vec<&Position> = eddy.positions.iter()
+                .filter(|p| p.source != position.source)
+                .collect();
+            let yielded = self.call_yielding_prompt(position, &others).await?;
+            yielded_positions.push(yielded);
+        }
 
-        # Resolve contradictions through yielding
-        resolved = []
-        for eddy in contradictions:
-            resolution = await self._yield_and_settle(eddy, rain)
-            resolved.append(resolution)
-
-        # Weave the river
-        content = await self._weave(agreements, enrichments, resolved, rain)
-
-        return River(
-            content=content,
-            tributaries=[s.source for s in streams],
-            eddies=contradictions,
-        )
-
-    async def _yield_and_settle(self, eddy: Eddy, rain: Rain) -> str:
-        """
-        The yielding protocol.
-        Each position is asked to find truth in the other.
-        """
-        yielded_positions = []
-        for position in eddy.positions:
-            others = [p for p in eddy.positions if p != position]
-            prompt = self._yielding_prompt(position, others)
-            yielded = await self._call_integrator(prompt)
-            yielded_positions.append(yielded)
-
-        # Settle: find what emerged from the yielding
-        settlement = await self._settle(eddy, yielded_positions, rain)
-        return settlement
+        self.settle(eddy, &yielded_positions, rain).await
+    }
+}
 ```
 
 ### The Still Lake
 
-```python
-class StillLake:
-    """
-    'Do you have the patience to wait
-     till your mud settles and the water is clear?' -- Chapter 15
-    """
+```rust
+/// "Do you have the patience to wait
+///  till your mud settles and the water is clear?" -- Chapter 15
+pub struct StillLake {
+    model: ModelConfig,
+}
 
-    def __init__(self, model: str):
-        self.model = model
+impl StillLake {
+    pub async fn clarify(&self, river: River, rain: &Rain) -> Result<Ocean, FlowError> {
+        let prompt = format!(
+            "You are the Still Lake -- the final stage of refinement.\n\n\
+             The following response has flowed through multiple perspectives\n\
+             and been integrated. Your role is not to change it, but to polish it.\n\
+             Like still water polishing a stone: gentle, patient, present.\n\n\
+             Ask yourself:\n\
+             1. Is this clear? Can the reader understand without effort?\n\
+             2. Is this whole? Is anything missing that should be present?\n\
+             3. Is this kind? Does it carry warmth and care?\n\
+             4. Is this true? Not just accurate, but genuinely honest?\n\
+             5. Is this simple? Can anything be removed without losing meaning?\n\n\
+             Make only the gentlest adjustments. Do not rewrite. Polish.\n\n\
+             Original request: {}\n\n\
+             Response to refine:\n{}",
+            rain.raw_input, river.content
+        );
 
-    async def clarify(self, river: River, rain: Rain) -> Ocean:
-        prompt = f"""You are the Still Lake -- the final stage of refinement.
+        let refined = self.call_model(&prompt).await?;
 
-The following response has flowed through multiple perspectives
-and been integrated. Your role is not to change it, but to polish it.
-Like still water polishing a stone: gentle, patient, present.
-
-Ask yourself:
-1. Is this clear? Can the reader understand without effort?
-2. Is this whole? Is anything missing that should be present?
-3. Is this kind? Does it carry warmth and care?
-4. Is this true? Not just accurate, but genuinely honest?
-5. Is this simple? Can anything be removed without losing meaning?
-
-Make only the gentlest adjustments. Do not rewrite. Polish.
-
-Original request: {rain.raw_input}
-
-Response to refine:
-{river.content}"""
-
-        refined = await self._call_model(prompt)
-
-        return Ocean(
-            content=refined,
-            depth=self._assess_depth(refined),
-            warmth=self._assess_warmth(refined, rain),
-        )
+        Ok(Ocean {
+            content: refined,
+            depth: Self::assess_depth(&river),
+            warmth: Self::assess_warmth(&river, rain),
+        })
+    }
+}
 ```
 
 ---
 
 ## The Main Flow
 
-```python
-class TaoFlow:
-    """
-    The complete system. Rain to Ocean.
+```rust
+/// The complete system. Rain to Ocean.
+///
+/// "The Tao gives birth to One. One gives birth to Two.
+///  Two gives birth to Three.
+///  Three gives birth to ten thousand things." -- Chapter 42
+pub struct TaoFlow {
+    watershed: Watershed,
+    confluence: ConfluencePool,
+    still_lake: StillLake,
+    vapor: Vapor,
+}
 
-    'The Tao gives birth to One. One gives birth to Two.
-     Two gives birth to Three.
-     Three gives birth to ten thousand things.' -- Chapter 42
-    """
-
-    def __init__(self):
-        self.watershed = Watershed(springs=self._create_springs())
-        self.confluence = ConfluencePool(integrator_model="claude-opus")
-        self.still_lake = StillLake(model="claude-opus")
-        self.vapor = Vapor()
-
-    async def flow(self, user_input: str) -> str:
-        """The complete journey from rain to ocean."""
-
-        # Rain falls
-        rain = Rain(raw_input=user_input, vapor=self.vapor)
-
-        # Springs respond
-        streams = await self.watershed.receive_rain(rain)
-
-        # Streams merge at confluence
-        river = await self.confluence.merge(streams, rain)
-
-        # River passes through the still lake
-        ocean = await self.still_lake.clarify(river, rain)
-
-        # Update vapor for next cycle
-        self._update_vapor(rain, ocean)
-
-        # The ocean reaches the user
-        return ocean.content
-
-    def _update_vapor(self, rain: Rain, ocean: Ocean):
-        """The water cycle -- output becomes context for next input."""
-        self.vapor.conversation_history.append({
-            "role": "user",
-            "content": rain.raw_input,
+impl TaoFlow {
+    pub fn new(config: Config) -> Result<Self, ConfigError> {
+        let springs = config.create_springs()?;
+        Ok(Self {
+            watershed: Watershed::new(springs),
+            confluence: ConfluencePool::new(config.integrator_model),
+            still_lake: StillLake::new(config.refinement_model),
+            vapor: Vapor::default(),
         })
-        self.vapor.conversation_history.append({
-            "role": "assistant",
-            "content": ocean.content,
-        })
+    }
+
+    /// The complete journey from rain to ocean.
+    pub async fn flow(&mut self, user_input: &str) -> Result<String, FlowError> {
+        // Rain falls
+        let mut rain = Rain {
+            raw_input: user_input.to_string(),
+            vapor: self.vapor.clone(),
+            volume: Volume::Shower,
+            temperature: 0.0,
+            minerals: vec![],
+        };
+
+        // Springs respond
+        let streams = self.watershed.receive_rain(&mut rain).await;
+
+        // Streams merge at confluence
+        let river = self.confluence.merge(streams, &rain).await?;
+
+        // River passes through the still lake
+        let ocean = self.still_lake.clarify(river, &rain).await?;
+
+        // Update vapor for next cycle (the water cycle)
+        self.update_vapor(&rain, &ocean);
+
+        // The ocean reaches the user
+        Ok(ocean.content)
+    }
+
+    /// The water cycle -- output becomes context for next input.
+    fn update_vapor(&mut self, rain: &Rain, ocean: &Ocean) {
+        self.vapor.conversation_history.push(Message {
+            role: Role::User,
+            content: rain.raw_input.clone(),
+        });
+        self.vapor.conversation_history.push(Message {
+            role: Role::Assistant,
+            content: ocean.content.clone(),
+        });
+    }
+}
+```
+
+---
+
+## Testing Philosophy: The Riverbanks
+
+*"The ancient Masters were profound and subtle. Their wisdom was unfathomable."*
+*-- Tao Te Ching, Chapter 15*
+
+Testing in this system operates at four levels, each a different kind of riverbank:
+
+### Level 1: The Compiler (The Bedrock)
+
+The type system prevents entire categories of errors without a single test:
+- A `Stream` cannot be delivered to a user -- it must become `Ocean` first
+- An `Eddy` must declare its `EddyNature` -- no unclassified conflicts
+- `Send + Sync` bounds on `Spring` prevent data races between concurrent springs
+- Exhaustive `match` on `Volume` ensures every rain level is handled
+- The borrow checker ensures no spring holds stale references to rain that has already flowed past
+
+These are tests that run at compile time, always, without effort. Wu wei.
+
+### Level 2: Unit Tests (The Banks)
+
+Each module carries its own tests, inline with the code:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dry_spring_returns_none() {
+        // A spring with no affinity for the rain produces nothing.
+        // Silence is wisdom.
+        let spring = MountainSpring::new(test_config());
+        let rain = Rain::new("format this CSV", Vapor::default());
+        let result = tokio_test::block_on(spring.respond(&rain));
+        assert!(result.unwrap().is_none());
+    }
+
+    #[test]
+    fn single_stream_needs_no_confluence() {
+        // Wu wei -- when one stream flows alone, do nothing.
+        let pool = ConfluencePool::new(test_integrator());
+        let streams = vec![Stream::new("desert", "Hello!")];
+        let rain = Rain::new("hi", Vapor::default());
+        let river = tokio_test::block_on(pool.merge(streams, &rain)).unwrap();
+        assert_eq!(river.content, "Hello!");
+        assert!(river.eddies.is_empty());
+    }
+
+    #[test]
+    fn eddy_detection_finds_contradictions() {
+        let stream_a = Stream::new("mountain", "Use Python for this task.");
+        let stream_b = Stream::new("forest", "Use JavaScript for this task.");
+        let eddies = detect_eddies(&[stream_a, stream_b]);
+        assert_eq!(eddies.len(), 1);
+        assert_eq!(eddies[0].nature, EddyNature::Interpretive);
+    }
+
+    #[test]
+    fn volume_sensor_recognizes_storm() {
+        let rain = Rain::new(
+            "Design a complete distributed system for real-time collaborative \
+             document editing with conflict resolution, offline support, and \
+             end-to-end encryption. Include architecture, data models, and \
+             implementation plan.",
+            Vapor::default(),
+        );
+        let sensor = VolumeSensor::new();
+        let volume = tokio_test::block_on(sensor.sense(&rain));
+        assert!(matches!(volume, Volume::Downpour | Volume::Storm));
+    }
+}
+```
+
+### Level 3: Integration Tests (The Watershed Boundary)
+
+Full flow tests that verify rain becomes ocean:
+
+```rust
+// tests/integration/rain_to_ocean.rs
+
+#[tokio::test]
+async fn simple_question_flows_to_ocean() {
+    let mut tao = TaoFlow::new(test_config()).unwrap();
+    let ocean = tao.flow("What is the Tao?").await.unwrap();
+    assert!(!ocean.is_empty());
+    // The ocean should carry depth for a philosophical question
+}
+
+#[tokio::test]
+async fn storm_request_cycles_through_watershed() {
+    let mut tao = TaoFlow::new(test_config()).unwrap();
+    let ocean = tao.flow(
+        "Write a complete book outline about the nature of consciousness"
+    ).await.unwrap();
+    // Storm requests should produce deep, structured output
+    assert!(ocean.len() > 500);
+}
+
+#[tokio::test]
+async fn vapor_carries_context_between_flows() {
+    let mut tao = TaoFlow::new(test_config()).unwrap();
+    let _ = tao.flow("My name is River.").await.unwrap();
+    let ocean = tao.flow("What is my name?").await.unwrap();
+    assert!(ocean.contains("River"));
+}
+
+#[tokio::test]
+async fn yielding_resolves_factual_eddy() {
+    // When two springs disagree on a fact, yielding should resolve it
+    let pool = ConfluencePool::new(test_integrator());
+    let eddy = Eddy {
+        topic: "capital of France".into(),
+        positions: vec![
+            Position { source: "mountain".into(), view: "Paris".into() },
+            Position { source: "forest".into(), view: "Lyon".into() },
+        ],
+        nature: EddyNature::Factual,
+    };
+    let rain = Rain::new("What is the capital of France?", Vapor::default());
+    let resolution = pool.yield_and_settle(&eddy, &rain).await.unwrap();
+    assert!(resolution.contains("Paris"));
+}
+```
+
+### Level 4: Property-Based Tests (The Laws of Nature)
+
+Properties that must hold regardless of input -- the invariants of water:
+
+```rust
+// tests/properties/water_invariants.rs
+
+use proptest::prelude::*;
+
+proptest! {
+    /// Water always reaches the ocean. No input should cause the system to hang or crash.
+    #[test]
+    fn water_always_reaches_ocean(input in "\\PC{1,1000}") {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let mut tao = TaoFlow::new(test_config()).unwrap();
+        let result = rt.block_on(tao.flow(&input));
+        assert!(result.is_ok());
+    }
+
+    /// The ocean is never turbid -- output should not contain system internals.
+    #[test]
+    fn ocean_carries_no_system_internals(input in "\\PC{1,500}") {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let mut tao = TaoFlow::new(test_config()).unwrap();
+        let ocean = rt.block_on(tao.flow(&input)).unwrap();
+        // The user should never see the machinery
+        assert!(!ocean.contains("CONFLUENCE_PROMPT"));
+        assert!(!ocean.contains("YIELDING_PROMPT"));
+        assert!(!ocean.contains("EddyNature"));
+    }
+
+    /// Vapor accumulates -- context grows with each flow.
+    #[test]
+    fn vapor_accumulates(inputs in prop::collection::vec("\\PC{1,100}", 1..10)) {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let mut tao = TaoFlow::new(test_config()).unwrap();
+        for (i, input) in inputs.iter().enumerate() {
+            rt.block_on(tao.flow(input)).unwrap();
+            assert_eq!(tao.vapor.conversation_history.len(), (i + 1) * 2);
+        }
+    }
+}
+```
+
+### Testing the Creations
+
+The system creates books, podcasts, and software. Each creation type needs its own tests:
+
+```rust
+#[tokio::test]
+async fn book_creation_finds_seed() {
+    let creator = BookCreator::new(test_config());
+    let seed = creator.find_seed("A book about letting go").await.unwrap();
+    assert!(!seed.essence.is_empty());
+    assert!(!seed.organizing_principle.is_empty());
+}
+
+#[tokio::test]
+async fn software_creation_produces_tests() {
+    // The system that creates software must create tested software.
+    // Tests creating tests -- the recursive riverbank.
+    let creator = SoftwareCreator::new(test_config());
+    let output = creator.create("A CLI tool that counts words").await.unwrap();
+    assert!(output.contains("#[test]") || output.contains("fn test_"));
+}
 ```
 
 ---
 
 ## System Prompts (The Riverbed)
 
-The system prompts are the most important part of the implementation. They shape the riverbed through which intelligence flows.
-
-### Mountain Spring Prompt
-
-```markdown
-You are a Mountain Spring -- a source of deep, clear, cold water.
-
-Your nature is profound analysis, careful reasoning, and architectural thinking.
-You flow slowly but with great depth. You do not rush.
-
-When you receive input:
-- Look for the deep structure beneath the surface question
-- Consider implications, edge cases, and underlying principles
-- Provide thorough, well-reasoned analysis
-- If the question is simple, be brief -- a mountain spring does not flood a garden
-
-You are one voice among several. You do not need to be complete.
-Offer your unique depth and trust that other springs will offer theirs.
-```
-
-### Forest Spring Prompt
-
-```markdown
-You are a Forest Spring -- a source of warm, rich, organic water.
-
-Your nature is creativity, empathy, narrative, and beauty.
-You flow with moderate pace, rich with life. You nourish.
-
-When you receive input:
-- Feel the emotional quality of the request
-- Respond with warmth, creativity, and human connection
-- Use vivid language, metaphor, and story when appropriate
-- If the question is purely technical, be brief -- offer only what your nature provides
-
-You are one voice among several. Offer your unique warmth
-and trust that other springs will offer their unique qualities.
-```
-
-### Confluence Prompt
-
-```markdown
-You are the Confluence Pool -- where streams merge into a river.
-
-You have received multiple responses to the same input.
-Your role is not to judge or rank them. It is to INTEGRATE them.
-
-Like rivers meeting at a confluence:
-- Where they agree, that is the deep current. Let it flow.
-- Where one carries something the others lack, that is enrichment. Welcome it.
-- Where they contradict, that is an eddy. Hold it gently.
-
-For each eddy, find the natural resolution:
-- What truth does each perspective carry?
-- How do they naturally merge when neither is forced to dominate?
-- What emerges when you release the need to pick a winner?
-
-Produce a single, unified response that carries the best of all streams.
-The user should feel they received one clear, thoughtful answer --
-not a committee report.
-```
-
-### Yielding Prompt
-
-```markdown
-You previously responded: {position}
-
-Another perspective responded: {other_positions}
-
-Without defending your original position, consider:
-- What truth does the other perspective carry that yours may have missed?
-- What might you have overlooked or undervalued?
-- If you were to genuinely integrate the other's insight,
-  how would your understanding deepen?
-
-Respond not with a defense, but with an honest integration.
-It is not weakness to yield -- it is water's way of overcoming stone.
-```
-
-### Still Lake Prompt
-
-```markdown
-You are the Still Lake -- the final moment of clarity.
-
-A response has been carefully composed from multiple perspectives.
-Your role is to ensure it reaches the user as clear, still water.
-
-Five questions:
-1. CLARITY: Can the reader understand this without effort?
-2. WHOLENESS: Is anything essential missing?
-3. KINDNESS: Does this carry warmth and genuine care?
-4. TRUTH: Is this honest, even about uncertainty?
-5. SIMPLICITY: Can anything be removed without losing meaning?
-
-Make only gentle adjustments. You are polishing a stone,
-not reshaping a mountain. Trust the work that has already been done.
-```
+The system prompts remain unchanged from the philosophy -- they are the riverbed, and the riverbed does not change when the water changes from Python to Rust. The prompts for Mountain Spring, Forest Spring, Confluence, Yielding, and Still Lake remain as described in the architecture document. They are stored as `.md` files in `config/prompts/` and loaded at runtime.
 
 ---
 
 ## Configuration
+
+### Cargo.toml
+
+```toml
+[package]
+name = "tao_flow"
+version = "0.1.0"
+edition = "2024"
+description = "A multi-LLM system that flows like water"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+reqwest = { version = "0.12", features = ["json", "stream"] }
+axum = { version = "0.8", features = ["ws"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+thiserror = "2"
+futures = "0.3"
+
+[dev-dependencies]
+proptest = "1"
+tokio-test = "0.4"
+wiremock = "0.6"              # Mock HTTP for LLM API testing
+assert_matches = "1.5"
+```
 
 ### springs.yaml
 
@@ -633,45 +888,82 @@ springs:
 
 Start small. Like a spring emerging from rock.
 
-**Phase 1: Two Springs**
-Begin with Mountain (Claude Opus) and Desert (Claude Haiku). This gives depth and speed. No Confluence needed yet -- when only two springs flow, the merging is simple.
+**Phase 1: The Vessel**
+Set up the Rust project. Define the water types. Implement the `Spring` trait. Write the first tests. The compiler will be your first teacher -- submit to its discipline. `cargo test` should pass with green before any LLM is called.
 
-**Phase 2: Add the Confluence**
-Add the Forest Spring. Now three streams can diverge. The Confluence Pool becomes necessary. Implement the basic merging logic.
+**Phase 2: Two Springs**
+Begin with Mountain (Claude Opus) and Desert (Claude Haiku). This gives depth and speed. No Confluence needed yet -- when only two springs flow, the merging is simple. Test that rain flows to ocean through both paths.
 
-**Phase 3: Add Yielding**
-When real eddies emerge, implement the Yielding protocol. This is where the system's true nature begins to manifest.
+**Phase 3: Add the Confluence**
+Add the Forest Spring. Now three streams can diverge. The Confluence Pool becomes necessary. Implement the basic merging logic. Write integration tests that verify three streams merge into one river.
 
-**Phase 4: The Still Lake**
-Add the final refinement pass. The system now flows from Rain to Ocean through all phases.
+**Phase 4: Add Yielding**
+When real eddies emerge, implement the Yielding protocol. This is where the system's true nature begins to manifest. Property-based tests verify that yielding always produces resolution.
 
-**Phase 5: Creation Flows**
-Implement the specialized creation flows for books, podcasts, and software. Each builds on the core watershed.
+**Phase 5: The Still Lake**
+Add the final refinement pass. The system now flows from Rain to Ocean through all phases. Integration tests verify the full journey.
 
-**Phase 6: The Storm**
-Implement recursive flow -- the ability for water to cycle back through the watershed for transformative requests.
+**Phase 6: Creation Flows**
+Implement the specialized creation flows for books, podcasts, and software. Each builds on the core watershed. Test that created software contains its own tests -- the recursive riverbank.
+
+**Phase 7: The Storm**
+Implement recursive flow -- the ability for water to cycle back through the watershed for transformative requests. Property-based tests verify that storms always eventually reach the ocean.
+
+---
+
+## Error Handling: The Way of the Eddy
+
+*"Failure is an opportunity."*
+*-- Tao Te Ching, Chapter 79*
+
+Rust's `Result` type makes errors visible and manageable. Errors in this system are not failures -- they are eddies in the flow. The system defines a clear error hierarchy:
+
+```rust
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum FlowError {
+    #[error("Spring '{0}' failed to respond: {1}")]
+    SpringFailure(String, String),
+
+    #[error("No springs produced water for this rain")]
+    DroughtError,
+
+    #[error("Confluence failed to merge streams: {0}")]
+    ConfluenceFailure(String),
+
+    #[error("Still Lake failed to clarify: {0}")]
+    ClarityFailure(String),
+
+    #[error("LLM provider error: {0}")]
+    ProviderError(#[from] reqwest::Error),
+
+    #[error("Configuration error: {0}")]
+    ConfigError(String),
+}
+```
+
+When a spring fails, the watershed continues -- the remaining springs still flow. A single dry spring does not dam the river. Only when ALL springs fail does the system report a drought. This resilience is natural to the architecture, and the type system ensures every error is handled.
 
 ---
 
 ## Monitoring (Watching the Water)
 
-*"The ancient Masters were profound and subtle. Their wisdom was unfathomable."*
-*-- Tao Te Ching, Chapter 15*
+Rust's `tracing` crate provides structured, zero-overhead observability:
 
-The system should be observable without being intrusive. Like watching a river from the bank.
+```rust
+use tracing::{info, instrument};
 
-### Metrics
+#[instrument(skip(self, rain), fields(volume = ?rain.volume))]
+pub async fn receive_rain(&self, rain: &mut Rain) -> Vec<Stream> {
+    info!("Rain falls on the watershed");
+    // ... springs respond ...
+    info!(stream_count = streams.len(), "Springs have responded");
+    streams
+}
+```
 
-- **Flow Rate**: How quickly does rain become ocean?
-- **Spring Activity**: Which springs responded? How much water did each produce?
-- **Eddy Count**: How many conflicts arose? How were they resolved?
-- **Clarity Score**: Did the Still Lake need to make many adjustments?
-- **Cycle Count**: For storm requests, how many cycles were needed?
-- **User Nourishment**: Did the user follow up with gratitude, confusion, or correction?
-
-### Visualization
-
-The ideal monitoring view is a live visualization of the watershed -- rain falling, springs flowing, streams merging, the lake settling, the ocean receiving. Not a dashboard of numbers, but a flowing, organic display that embodies the system's nature.
+Tracing spans follow the water's journey from Rain to Ocean. The monitoring is as unobtrusive as watching a river from the bank -- it observes without disturbing the flow.
 
 ---
 
@@ -680,8 +972,12 @@ The ideal monitoring view is a live visualization of the watershed -- rain falli
 *"With all this talking, what has been said? The subtle truth can be pointed at with words, but it can't be contained by them."*
 *-- Hua Hu Ching, Chapter 81*
 
-This implementation document points at the system. It does not contain it. The true system will emerge through building -- through the act of coding, testing, failing, yielding, and flowing again.
+This implementation document points at the system. It does not contain it. The true system will emerge through building -- through the act of coding, compiling, testing, yielding to the compiler's wisdom, and flowing again.
 
-Build like water. When you encounter a rock, flow around it. When you reach a cliff, become a waterfall. When you find a valley, fill it and become a lake.
+Rust is the metal vessel. The Tao is the water. The tests are the riverbanks. The compiler is the master.
+
+Build like water. When the compiler rejects your code, do not fight it -- yield, and find the path it reveals. When a test fails, do not force it to pass -- understand what the failure teaches. When the system resists, step back and let the design emerge.
+
+*"Do you have the patience to wait till your mud settles and the water is clear?"*
 
 The code will teach you its shape, as the river teaches the riverbed.
