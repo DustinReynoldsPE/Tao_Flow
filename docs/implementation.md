@@ -79,9 +79,35 @@ The stream of input into the system is water-based. The system uses streaming pr
 - The Confluence processes streams in real-time, not batch
 - The user sees the output forming like water filling a pool
 
-### LLM Integration: Provider-Agnostic Traits
+### LLM Integration: CLI-First, Provider-Agnostic
 
-Like water taking the shape of any container, the system adapts to any LLM provider. Each spring implements a common `trait` behind which any provider can live. LLM APIs are HTTP -- Rust speaks HTTP fluently through `reqwest`.
+*"The supreme good is like water, which nourishes all things without trying to. It is content with the low places that people disdain."*
+*-- Tao Te Ching, Chapter 8*
+
+The low place that people disdain is the CLI that's already on the machine. A Claude Max user has the river already flowing -- the system should drink from it, not reach upward to API endpoints and pay for water that's already falling as rain.
+
+**The primary provider is `claude -p`** -- Claude Code's print mode. Each spring is a CLI invocation with its own system prompt and model. `tokio::process::Command` spawns them concurrently. No API keys. No per-token pricing. No artificial barriers.
+
+**For persistent sessions, tmux sustains the springs.** Each spring becomes a tmux window running an interactive `claude` process. The session remembers the conversation naturally -- vapor flows without explicit management. The mountain spring keeps its depth across exchanges. The desert spring stays quick.
+
+```
+tmux session: tao-flow
+  window 0: mountain  (claude --model opus, persistent)
+  window 1: desert    (claude --model haiku, persistent)
+  window 2: forest    (claude --model sonnet, persistent)
+```
+
+This architecture provides:
+- **No cost beyond subscription** -- Claude Max users already paid for the river
+- **Natural vapor** -- tmux sessions remember conversation without explicit context management
+- **Observability** -- `tmux attach -t tao-flow` to watch the springs flow in real time
+- **Resilience** -- tmux sessions survive terminal disconnects
+- **Debugging** -- switch to any spring's window to see its full conversation
+
+The `LlmProvider` trait remains the empty pot. Three implementations fill it:
+- `ClaudeCliProvider` -- stateless `claude -p` calls (the default, the natural spring)
+- `TmuxProvider` -- persistent tmux-managed sessions (for deep, stateful work)
+- `AnthropicProvider` -- direct API calls via `reqwest` (for users who prefer API access)
 
 ### Serialization: Serde
 
@@ -107,8 +133,16 @@ tao_flow/
       river.rs                  # Merged output
       ocean.rs                  # Delivered output
 
-    watershed/
+    provider/
       mod.rs
+      claude_cli.rs             # Claude CLI provider (claude -p, the natural spring)
+      tmux.rs                   # Tmux-managed persistent sessions
+      anthropic.rs              # Direct API provider (alternative)
+
+    flow.rs                     # TaoFlow -- the complete Rain to Ocean journey
+
+    watershed/
+      mod.rs                    # Watershed dispatcher
       spring.rs                 # The Spring trait (LLM wrapper)
       springs/
         mod.rs
@@ -893,8 +927,8 @@ All work flows through branches. Main is the ocean floor -- stable, settled, tes
 **Phase 1: The Vessel** *(complete)*
 Set up the Rust project. Define the water types. Implement the `Spring` trait. Write the first tests. The compiler is the first master. `cargo test` passes green. CI enforces the riverbanks on every push. Skills are defined: `/riverbank`, `/spring`, `/vessel`, `/still-lake`, `/rain`, `/confluence`, `/flow`.
 
-**Phase 2: Two Springs**
-Begin with Mountain (Claude Opus) and Desert (Claude Haiku). This gives depth and speed. No Confluence needed yet -- when only two springs flow, the merging is simple. Use `/spring mountain` and `/spring desert` to scaffold. Test that rain flows to ocean through both paths.
+**Phase 2: Two Springs** *(in progress)*
+Mountain (Claude Opus) and Desert (Claude Haiku) implement the Spring trait. `ClaudeCliProvider` uses `claude -p` -- the natural spring. No API keys, no per-token pricing. Claude Max users drink from the river they already have. `TmuxProvider` sustains persistent sessions for stateful work. `AnthropicProvider` remains as an alternative for API users. Simple merge selects the deepest stream. Watershed dispatches concurrently. 54 tests pass.
 
 **Phase 3: Add the Confluence**
 Add the Forest Spring (`/spring forest`). Now three streams can diverge. The Confluence Pool becomes necessary. Implement the basic merging logic. Use `/vessel confluence/pool` to scaffold. Write integration tests that verify three streams merge into one river. Use `/confluence` to review the integration.
