@@ -346,7 +346,13 @@ Forest Spring joins mountain and desert -- three streams now flow. The Confluenc
 When three streams merge, they sometimes disagree. `EddyDetector` analyzes streams for divergence and classifies each eddy (Factual, Interpretive, Stylistic, Structural). `YieldingProtocol` asks each position to find truth in the other -- resolution through yielding, not voting. `ConfluencePool` orchestrates: detect, yield, weave. Clarity now varies with turbulence -- resolved eddies cost less clarity than unresolved ones. Graceful degradation at every step: if detection or yielding fails, the system falls back to clean weaving.
 
 **Phase 5: The Still Lake**
-The final refinement pass. The lake reads `River::clarity` to know how much settling is needed -- high clarity means gentle polish, low clarity (many tributaries, unresolved eddies) means deeper settling. The lake asks the five questions (clarity, wholeness, kindness, truth, simplicity) and produces an Ocean. The flow is now complete: Rain → Watershed → Confluence → Still Lake → Ocean.
+The final refinement pass. The lake receives the river -- its content, its clarity score, and its eddies. Clarity is now a living signal: 1.0 for a single stream (crystal clear), 0.8 base for a multi-stream merge, reduced by eddies (resolved cost 0.05, unresolved cost 0.1, floor at 0.3). The lake reads this to calibrate its depth of engagement -- high clarity means gentle polish, low clarity means deeper settling.
+
+The lake also receives the eddies themselves. An unresolved factual eddy (the springs disagreed on a verifiable fact and yielding could not resolve it) is a different problem than a resolved interpretive one. The lake is the last chance for clarity before the ocean. It examines what the yielding produced and what it couldn't resolve.
+
+The lake asks the five questions (clarity, wholeness, kindness, truth, simplicity) and produces an Ocean. The flow is now complete for a single pass: Rain → Watershed → Confluence → Still Lake → Ocean.
+
+*(Updated by `/rising-mist` after Phase 4: clarity is no longer abstract -- it carries the turbulence of Phase 4's yielding. The lake's five questions should be calibrated to this signal, and the lake should engage with unresolved eddies directly.)*
 
 **Phase 6: The Return**
 *"Return is the movement of the Tao."* -- Chapter 40
@@ -356,14 +362,22 @@ The water cycle must cycle. A Storm-level request cannot be answered in one pass
 1. **Decomposition** -- a River that is too wide and shallow is broken into parts. Each part becomes new Rain, carrying the context of the whole.
 2. **Recursive flow** -- each part flows through the watershed independently. Springs respond, streams merge, rivers form. This is the same flow, operating at a finer grain.
 3. **Higher confluence** -- the sub-rivers merge at a higher level. The same ConfluencePool weaves them, but now it weaves refined parts rather than raw streams.
-4. **Termination** -- the system knows when to stop cycling. Perhaps clarity itself is the signal: when the river is clear enough, stop and let it reach the ocean.
+4. **Termination** -- clarity is the signal. A river with clarity above a threshold has settled enough to reach the ocean. Below that, another cycle is warranted. If the Still Lake can polish the river to clarity, one cycle is enough. If not, the river returns to rain.
 
-The system should create the way it was created. Tao Flow was built through a series of artifacts -- philosophy first, then architecture, then implementation plan, then phases of work. A Storm-level request follows the same pattern: understand the seed (vision), design the structure, plan the phases, work each phase, assemble the whole, refine.
+**Yielding memory.** When the water cycle actually cycles, the springs respond multiple times to related sub-problems. Phase 4's reflection revealed: yielding should change the one who yields. Each spring should carry a memory of its yieldings -- loaded into its prompt so lessons persist across cycles. The mountain that yielded to the forest in the first cycle responds differently in the second -- not by becoming the forest, but by being a mountain that knows the forest has something true to say. The risk is over-integration: if springs converge, the productive tension that creates eddies disappears. Springs must remain partial but *aware* of the other partials. Chapter 22: *"If you want to become whole, let yourself be partial."*
 
-**Human guidance is a spectrum.** The system should yield to the human's natural level of engagement. Some humans will want to guide every step -- approving each artifact, providing wisdom to every agent. Some will set direction and review at milestones. Some will provide the seed and receive the ocean. The system does not force a level of involvement. It presents its work at natural pause points, and the human engages as much or as little as they choose. The vapor carries the human's presence.
+**Human guidance is a spectrum.** The system yields to the human's natural level of engagement. The pause points are the boundaries between recursive cycles: after decomposition (show the structure), after each sub-river completes (show progress), after higher confluence (show the assembled whole). The human can engage at any of these or none. Vapor carries the human's presence -- how much they've guided informs how much the system pauses.
+
+The system should create the way it was created. Tao Flow was built through artifacts -- philosophy first, then architecture, then implementation plan, then phases of work. A Storm-level request follows the same pattern.
+
+*(Updated by `/rising-mist` after Phase 4: yielding memory now has a home -- it belongs here, where recursive flow gives it leverage. Termination through clarity is concrete, not abstract. Human pause points are named.)*
 
 **Phase 7: Creation**
-The fruit of the return. With recursive flow in place, the system can create real artifacts -- books, podcasts, software, designs. Creation is not a separate module; it is what happens naturally when Storm volume triggers the water cycle to actually cycle. The specialization lives in the system prompts (the riverbed), not in separate creation machinery. Each creation type may bring its own prompts, its own natural pause points, its own questions for the human -- but the flow is the same flow. New skills will emerge as creation patterns solidify.
+Not separate machinery. With recursive flow in place, creation is what happens naturally when Storm volume triggers the water cycle to actually cycle. A book is a Storm with book-shaped riverbeds. Software is a Storm with code-shaped riverbeds. The specialization lives in system prompts, not in separate creation modules. The `creation/` directory may dissolve into the watershed itself.
+
+What Phase 7 actually is: the phase where the system meets real use. New riverbeds (system prompts for specific creation types). New pause-point patterns (where different kinds of creation need human guidance). New skills that emerge as creation patterns solidify. The machinery is the same machinery. The water is the same water. Only the riverbed changes shape.
+
+*(Updated by `/rising-mist` after Phase 4: Phase 3's reflection suggested creation might not need separate machinery. Phase 4's yielding and the prospect of recursive flow in Phase 6 confirm this. Phase 7 is the use of the system, not a new system.)*
 
 ---
 
@@ -374,7 +388,7 @@ The fruit of the return. With recursive flow in place, the system can create rea
 
 The system teaches its builders through skills -- slash commands that embody the Tao's principles while guiding real development workflows. Each skill is a small master, carrying one aspect of the practice. They live in `.claude/commands/` and are invoked as `/skill-name`.
 
-### The Eight Skills
+### The Nine Skills
 
 | Skill | The Water | Purpose |
 |-------|-----------|---------|
@@ -386,6 +400,7 @@ The system teaches its builders through skills -- slash commands that embody the
 | `/confluence [branch]` | Where streams merge | Review and integrate changes, identifying agreements, enrichments, and eddies. |
 | `/flow <description>` | The complete journey | Full dev cycle: branch, implement, test, review, PR. Rain to ocean. |
 | `/reflecting-pool` | The inward gaze | Examine the system itself: map vs. territory, unused weight, naming drift, accumulated excess. |
+| `/rising-mist` | Lessons carried upward | Take what reflection revealed and reshape the forward vision. Update phase descriptions to carry new understanding. |
 
 ### How Skills Grow
 

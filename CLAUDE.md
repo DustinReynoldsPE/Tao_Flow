@@ -42,7 +42,7 @@ src/
 
 ## Skills
 
-Use `/riverbank`, `/spring`, `/vessel`, `/still-lake`, `/rain`, `/confluence`, `/flow`, `/reflecting-pool`.
+Use `/riverbank`, `/spring`, `/vessel`, `/still-lake`, `/rain`, `/confluence`, `/flow`, `/reflecting-pool`, `/rising-mist`.
 See `docs/implementation.md` "Skills: Teaching the Builder" for details.
 
 ## The Journey
