@@ -104,10 +104,11 @@ This architecture provides:
 - **Resilience** -- tmux sessions survive terminal disconnects
 - **Debugging** -- switch to any spring's window to see its full conversation
 
-The `LlmProvider` trait remains the empty pot. Three implementations fill it:
-- `ClaudeCliProvider` -- stateless `claude -p` calls (the default, the natural spring)
-- `TmuxProvider` -- persistent tmux-managed sessions (for deep, stateful work)
-- `AnthropicProvider` -- direct API calls via `reqwest` (for users who prefer API access)
+The `LlmSource` trait is the underground aquifer -- the hidden water source that feeds each spring. Two sources fill it:
+- `ClaudeCliSource` -- stateless `claude -p` calls (the default, the natural spring)
+- `AnthropicSource` -- direct API calls via `reqwest` (for users who prefer API access)
+
+**tmux is the vessel, not the source.** It provides the walls of the space each agent occupies. Each window allows the user to perceive the agent -- much like you can see the mountain outside of a window, but the window is not the mountain. The vessel carries the conversation naturally; the spring does not need to carry its own memory.
 
 ### Serialization: Serde
 
@@ -133,16 +134,18 @@ tao_flow/
       river.rs                  # Merged output
       ocean.rs                  # Delivered output
 
-    provider/
-      mod.rs
-      claude_cli.rs             # Claude CLI provider (claude -p, the natural spring)
-      tmux.rs                   # Tmux-managed persistent sessions
-      anthropic.rs              # Direct API provider (alternative)
+    vessel/
+      mod.rs                    # The vessel -- the boat, not the water
+      tmux.rs                   # tmux session management (the window, not the mountain)
 
     flow.rs                     # TaoFlow -- the complete Rain to Ocean journey
 
     watershed/
       mod.rs                    # Watershed dispatcher
+      source/
+        mod.rs                  # LlmSource trait -- the underground aquifer
+        claude_cli.rs           # Claude CLI source (claude -p, the natural spring)
+        anthropic.rs            # Direct API source (alternative)
       spring.rs                 # The Spring trait (LLM wrapper)
       springs/
         mod.rs
@@ -928,7 +931,7 @@ All work flows through branches. Main is the ocean floor -- stable, settled, tes
 Set up the Rust project. Define the water types. Implement the `Spring` trait. Write the first tests. The compiler is the first master. `cargo test` passes green. CI enforces the riverbanks on every push. Skills are defined: `/riverbank`, `/spring`, `/vessel`, `/still-lake`, `/rain`, `/confluence`, `/flow`.
 
 **Phase 2: Two Springs** *(in progress)*
-Mountain (Claude Opus) and Desert (Claude Haiku) implement the Spring trait. `ClaudeCliProvider` uses `claude -p` -- the natural spring. No API keys, no per-token pricing. Claude Max users drink from the river they already have. `TmuxProvider` sustains persistent sessions for stateful work. `AnthropicProvider` remains as an alternative for API users. Simple merge selects the deepest stream. Watershed dispatches concurrently. 54 tests pass.
+Mountain (Claude Opus) and Desert (Claude Haiku) implement the Spring trait. `ClaudeCliSource` uses `claude -p` -- the natural spring. No API keys, no per-token pricing. Claude Max users drink from the river they already have. tmux sustains the vessel -- persistent windows where springs flow and conversations deepen naturally. `AnthropicSource` remains as an alternative for API users. Simple merge selects the deepest stream. Watershed dispatches concurrently.
 
 **Phase 3: Add the Confluence**
 Add the Forest Spring (`/spring forest`). Now three streams can diverge. The Confluence Pool becomes necessary. Implement the basic merging logic. Use `/vessel confluence/pool` to scaffold. Write integration tests that verify three streams merge into one river. Use `/confluence` to review the integration.
@@ -1018,8 +1021,8 @@ pub enum FlowError {
     #[error("Still Lake failed to clarify: {0}")]
     ClarityFailure(String),
 
-    #[error("LLM provider error: {0}")]
-    ProviderError(#[from] reqwest::Error),
+    #[error("Source error: {0}")]
+    SourceError(#[from] reqwest::Error),
 
     #[error("Configuration error: {0}")]
     ConfigError(String),

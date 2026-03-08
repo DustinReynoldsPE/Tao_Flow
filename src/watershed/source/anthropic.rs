@@ -2,18 +2,21 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-use super::{ChatMessage, ChatRole, LlmProvider};
+use super::{ChatMessage, ChatRole, LlmSource};
 use crate::error::FlowError;
 
-/// Anthropic API provider -- Claude models.
-pub struct AnthropicProvider {
+/// Anthropic API source -- Claude models via direct API.
+///
+/// For those who choose to pay for the water directly.
+/// The API is the commercial well -- reliable, metered, clear.
+pub struct AnthropicSource {
     client: Client,
     api_key: String,
     model: String,
     max_tokens: u32,
 }
 
-impl AnthropicProvider {
+impl AnthropicSource {
     pub fn new(api_key: impl Into<String>, model: impl Into<String>) -> Self {
         Self {
             client: Client::new(),
@@ -66,7 +69,7 @@ impl From<&ChatMessage> for ApiMessage {
 }
 
 #[async_trait]
-impl LlmProvider for AnthropicProvider {
+impl LlmSource for AnthropicSource {
     async fn complete(&self, system: &str, messages: &[ChatMessage]) -> Result<String, FlowError> {
         let api_messages: Vec<ApiMessage> = messages.iter().map(ApiMessage::from).collect();
 

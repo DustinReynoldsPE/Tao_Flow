@@ -1,12 +1,11 @@
 pub mod anthropic;
 pub mod claude_cli;
-pub mod tmux;
 
 use async_trait::async_trait;
 
 use crate::error::FlowError;
 
-/// A message sent to an LLM provider.
+/// A message sent to an underground source.
 #[derive(Debug, Clone)]
 pub struct ChatMessage {
     pub role: ChatRole,
@@ -20,13 +19,17 @@ pub enum ChatRole {
     Assistant,
 }
 
-/// The empty pot -- any LLM provider can fill this shape.
+/// The underground source -- the aquifer that feeds each spring.
+///
+/// Every spring draws from an underground source. The source
+/// is hidden, deep, formless. What matters is the water that
+/// emerges, not the rock it passes through.
 ///
 /// "We shape clay into a pot, but it is the emptiness inside
 /// that holds whatever we want." -- Tao Te Ching, Chapter 11
 #[async_trait]
-pub trait LlmProvider: Send + Sync {
-    /// Send a completion request to the LLM.
+pub trait LlmSource: Send + Sync {
+    /// Draw water from the source.
     async fn complete(&self, system: &str, messages: &[ChatMessage]) -> Result<String, FlowError>;
 }
 
@@ -34,13 +37,13 @@ pub trait LlmProvider: Send + Sync {
 pub mod mock {
     use super::*;
 
-    /// A mock provider that returns a predetermined response.
+    /// A mock source that returns a predetermined response.
     /// For testing -- the spring flows without calling any API.
-    pub struct MockProvider {
+    pub struct MockSource {
         pub response: String,
     }
 
-    impl MockProvider {
+    impl MockSource {
         pub fn new(response: impl Into<String>) -> Self {
             Self {
                 response: response.into(),
@@ -49,7 +52,7 @@ pub mod mock {
     }
 
     #[async_trait]
-    impl LlmProvider for MockProvider {
+    impl LlmSource for MockSource {
         async fn complete(
             &self,
             _system: &str,
@@ -59,12 +62,12 @@ pub mod mock {
         }
     }
 
-    /// A mock provider that echoes the user's last message.
+    /// A mock source that echoes the user's last message.
     /// Useful for testing that input flows through correctly.
-    pub struct EchoProvider;
+    pub struct EchoSource;
 
     #[async_trait]
-    impl LlmProvider for EchoProvider {
+    impl LlmSource for EchoSource {
         async fn complete(
             &self,
             _system: &str,
@@ -79,11 +82,11 @@ pub mod mock {
         }
     }
 
-    /// A mock provider that always fails -- a dry well.
-    pub struct DryProvider;
+    /// A mock source that always fails -- a dry well.
+    pub struct DrySource;
 
     #[async_trait]
-    impl LlmProvider for DryProvider {
+    impl LlmSource for DrySource {
         async fn complete(
             &self,
             _system: &str,
@@ -101,15 +104,15 @@ pub mod mock {
         use super::*;
 
         #[tokio::test]
-        async fn mock_provider_returns_response() {
-            let provider = MockProvider::new("The Tao flows.");
-            let result = provider.complete("system", &[]).await.unwrap();
+        async fn mock_source_returns_response() {
+            let source = MockSource::new("The Tao flows.");
+            let result = source.complete("system", &[]).await.unwrap();
             assert_eq!(result, "The Tao flows.");
         }
 
         #[tokio::test]
-        async fn echo_provider_echoes_last_user_message() {
-            let provider = EchoProvider;
+        async fn echo_source_echoes_last_user_message() {
+            let source = EchoSource;
             let messages = vec![
                 ChatMessage {
                     role: ChatRole::User,
@@ -124,14 +127,14 @@ pub mod mock {
                     content: "Tell me more.".into(),
                 },
             ];
-            let result = provider.complete("system", &messages).await.unwrap();
+            let result = source.complete("system", &messages).await.unwrap();
             assert_eq!(result, "Tell me more.");
         }
 
         #[tokio::test]
-        async fn dry_provider_fails() {
-            let provider = DryProvider;
-            let result = provider.complete("system", &[]).await;
+        async fn dry_source_fails() {
+            let source = DrySource;
+            let result = source.complete("system", &[]).await;
             assert!(result.is_err());
         }
     }

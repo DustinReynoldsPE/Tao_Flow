@@ -100,7 +100,7 @@ impl TaoFlow {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::provider::mock::{DryProvider, MockProvider};
+    use crate::watershed::source::mock::{DrySource, MockSource};
     use crate::watershed::spring::SpringConfig;
     use crate::watershed::{DesertSpring, MountainSpring};
     use std::collections::HashMap;
@@ -115,7 +115,7 @@ mod tests {
         };
         Box::new(MountainSpring::new(
             config,
-            Box::new(MockProvider::new(response)),
+            Box::new(MockSource::new(response)),
         ))
     }
 
@@ -129,7 +129,7 @@ mod tests {
         };
         Box::new(DesertSpring::new(
             config,
-            Box::new(MockProvider::new(response)),
+            Box::new(MockSource::new(response)),
         ))
     }
 
@@ -188,7 +188,7 @@ mod tests {
                 nature: "deep".into(),
                 affinities: HashMap::new(),
             },
-            Box::new(DryProvider),
+            Box::new(DrySource),
         )) as Box<dyn crate::watershed::Spring>]);
         let mut tao = TaoFlow::new(watershed);
         let result = tao.flow("hello").await;

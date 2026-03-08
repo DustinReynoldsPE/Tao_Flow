@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 
 use crate::error::FlowError;
-use crate::provider::{ChatMessage, ChatRole, LlmProvider};
 use crate::water::{Rain, Stream};
+use crate::watershed::source::{ChatMessage, ChatRole, LlmSource};
 use crate::watershed::spring::{Spring, SpringConfig};
 
 const SYSTEM_PROMPT: &str = "\
@@ -27,12 +27,12 @@ Offer your unique depth and trust that other springs will offer theirs.";
 /// within the earth, carrying the minerals of long contemplation.
 pub struct MountainSpring {
     config: SpringConfig,
-    provider: Box<dyn LlmProvider>,
+    source: Box<dyn LlmSource>,
 }
 
 impl MountainSpring {
-    pub fn new(config: SpringConfig, provider: Box<dyn LlmProvider>) -> Self {
-        Self { config, provider }
+    pub fn new(config: SpringConfig, source: Box<dyn LlmSource>) -> Self {
+        Self { config, source }
     }
 }
 
@@ -76,7 +76,7 @@ impl Spring for MountainSpring {
             content: rain.raw_input.clone(),
         });
 
-        let content = self.provider.complete(SYSTEM_PROMPT, &messages).await?;
+        let content = self.source.complete(SYSTEM_PROMPT, &messages).await?;
 
         if content.trim().is_empty() {
             return Ok(None);
@@ -89,8 +89,8 @@ impl Spring for MountainSpring {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::provider::mock::MockProvider;
     use crate::water::Vapor;
+    use crate::watershed::source::mock::MockSource;
     use std::collections::HashMap;
 
     fn mountain_config() -> SpringConfig {
@@ -109,7 +109,7 @@ mod tests {
 
     #[tokio::test]
     async fn mountain_responds_to_philosophical_rain() {
-        let provider = MockProvider::new("The Tao is the source of all things.");
+        let provider = MockSource::new("The Tao is the source of all things.");
         let spring = MountainSpring::new(mountain_config(), Box::new(provider));
 
         let mut rain = Rain::new("What is the Tao?", Vapor::default());
@@ -124,7 +124,7 @@ mod tests {
 
     #[tokio::test]
     async fn mountain_carries_conversation_context() {
-        let provider = MockProvider::new("Your name is River.");
+        let provider = MockSource::new("Your name is River.");
         let spring = MountainSpring::new(mountain_config(), Box::new(provider));
 
         let mut vapor = Vapor::default();
@@ -140,7 +140,7 @@ mod tests {
 
     #[tokio::test]
     async fn mountain_stays_dry_for_empty_response() {
-        let provider = MockProvider::new("");
+        let provider = MockSource::new("");
         let spring = MountainSpring::new(mountain_config(), Box::new(provider));
 
         let rain = Rain::new("hello", Vapor::default());

@@ -10,8 +10,8 @@ pub mod confluence;
 pub mod creation;
 pub mod error;
 pub mod flow;
-pub mod provider;
 pub mod still_lake;
+pub mod vessel;
 pub mod water;
 pub mod watershed;
 

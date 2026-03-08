@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 
 use crate::error::FlowError;
-use crate::provider::{ChatMessage, ChatRole, LlmProvider};
 use crate::water::{Rain, Stream};
+use crate::watershed::source::{ChatMessage, ChatRole, LlmSource};
 use crate::watershed::spring::{Spring, SpringConfig};
 
 const SYSTEM_PROMPT: &str = "\
@@ -27,12 +27,12 @@ For complex tasks, offer your quick clarity and trust that deeper springs will a
 /// that surfaces briefly in arid land -- sparse but vital.
 pub struct DesertSpring {
     config: SpringConfig,
-    provider: Box<dyn LlmProvider>,
+    source: Box<dyn LlmSource>,
 }
 
 impl DesertSpring {
-    pub fn new(config: SpringConfig, provider: Box<dyn LlmProvider>) -> Self {
-        Self { config, provider }
+    pub fn new(config: SpringConfig, source: Box<dyn LlmSource>) -> Self {
+        Self { config, source }
     }
 }
 
@@ -74,7 +74,7 @@ impl Spring for DesertSpring {
             content: rain.raw_input.clone(),
         });
 
-        let content = self.provider.complete(SYSTEM_PROMPT, &messages).await?;
+        let content = self.source.complete(SYSTEM_PROMPT, &messages).await?;
 
         if content.trim().is_empty() {
             return Ok(None);
@@ -89,8 +89,8 @@ impl Spring for DesertSpring {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::provider::mock::MockProvider;
     use crate::water::Vapor;
+    use crate::watershed::source::mock::MockSource;
     use std::collections::HashMap;
 
     fn desert_config() -> SpringConfig {
@@ -109,7 +109,7 @@ mod tests {
 
     #[tokio::test]
     async fn desert_responds_quickly() {
-        let provider = MockProvider::new("Hello!");
+        let provider = MockSource::new("Hello!");
         let spring = DesertSpring::new(desert_config(), Box::new(provider));
 
         let rain = Rain::new("hi", Vapor::default());
@@ -122,7 +122,7 @@ mod tests {
 
     #[tokio::test]
     async fn desert_handles_formatting() {
-        let provider = MockProvider::new("formatted output");
+        let provider = MockSource::new("formatted output");
         let spring = DesertSpring::new(desert_config(), Box::new(provider));
 
         let mut rain = Rain::new("format this as a list", Vapor::default());
@@ -134,7 +134,7 @@ mod tests {
 
     #[tokio::test]
     async fn desert_stays_dry_for_empty_response() {
-        let provider = MockProvider::new("   ");
+        let provider = MockSource::new("   ");
         let spring = DesertSpring::new(desert_config(), Box::new(provider));
 
         let rain = Rain::new("hello", Vapor::default());

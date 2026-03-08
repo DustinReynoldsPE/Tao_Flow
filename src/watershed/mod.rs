@@ -1,7 +1,9 @@
+pub mod source;
 pub mod spring;
 pub mod springs;
 pub mod volume_sensor;
 
+pub use source::{ChatMessage, ChatRole, LlmSource};
 pub use spring::Spring;
 pub use springs::{DesertSpring, MountainSpring};
 pub use volume_sensor::VolumeSensor;
@@ -89,8 +91,8 @@ impl Watershed {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::provider::mock::MockProvider;
     use crate::water::Vapor;
+    use crate::watershed::source::mock::MockSource;
     use crate::watershed::spring::SpringConfig;
     use std::collections::HashMap;
 
@@ -104,7 +106,7 @@ mod tests {
         };
         Box::new(MountainSpring::new(
             config,
-            Box::new(MockProvider::new(response)),
+            Box::new(MockSource::new(response)),
         ))
     }
 
@@ -118,7 +120,7 @@ mod tests {
         };
         Box::new(DesertSpring::new(
             config,
-            Box::new(MockProvider::new(response)),
+            Box::new(MockSource::new(response)),
         ))
     }
 

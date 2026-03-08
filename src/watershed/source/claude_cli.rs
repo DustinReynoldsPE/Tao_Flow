@@ -1,10 +1,10 @@
 use async_trait::async_trait;
 use tokio::process::Command;
 
-use super::{ChatMessage, ChatRole, LlmProvider};
+use super::{ChatMessage, ChatRole, LlmSource};
 use crate::error::FlowError;
 
-/// Claude CLI provider -- uses `claude -p` (print mode).
+/// Claude CLI source -- uses `claude -p` (print mode).
 ///
 /// This is the natural spring. A Claude Max user already has
 /// the river flowing. The system simply drinks from it.
@@ -15,12 +15,12 @@ use crate::error::FlowError;
 /// "The supreme good is like water, which nourishes all things
 /// without trying to. It is content with the low places that
 /// people disdain." -- Tao Te Ching, Chapter 8
-pub struct ClaudeCliProvider {
+pub struct ClaudeCliSource {
     model: String,
     max_tokens: Option<u32>,
 }
 
-impl ClaudeCliProvider {
+impl ClaudeCliSource {
     pub fn new(model: impl Into<String>) -> Self {
         Self {
             model: model.into(),
@@ -65,7 +65,7 @@ impl ClaudeCliProvider {
 }
 
 #[async_trait]
-impl LlmProvider for ClaudeCliProvider {
+impl LlmSource for ClaudeCliSource {
     async fn complete(&self, system: &str, messages: &[ChatMessage]) -> Result<String, FlowError> {
         let prompt = Self::format_conversation(system, messages);
 
@@ -138,7 +138,7 @@ mod tests {
             role: ChatRole::User,
             content: "What is the Tao?".into(),
         }];
-        let formatted = ClaudeCliProvider::format_conversation("You are wise.", &messages);
+        let formatted = ClaudeCliSource::format_conversation("You are wise.", &messages);
         assert!(formatted.contains("What is the Tao?"));
     }
 
@@ -158,7 +158,7 @@ mod tests {
                 content: "What is my name?".into(),
             },
         ];
-        let formatted = ClaudeCliProvider::format_conversation("system", &messages);
+        let formatted = ClaudeCliSource::format_conversation("system", &messages);
         assert!(formatted.contains("Prior conversation:"));
         assert!(formatted.contains("User: My name is River."));
         assert!(formatted.contains("Assistant: Hello, River."));
@@ -167,7 +167,7 @@ mod tests {
 
     #[test]
     fn format_empty_messages() {
-        let formatted = ClaudeCliProvider::format_conversation("system", &[]);
+        let formatted = ClaudeCliSource::format_conversation("system", &[]);
         assert!(formatted.contains("System context"));
     }
 }

@@ -1,34 +1,33 @@
-use async_trait::async_trait;
 use tokio::process::Command;
 
-use super::{ChatMessage, LlmProvider};
 use crate::error::FlowError;
 
-/// Tmux-managed persistent Claude session.
+/// A tmux vessel -- the walls that hold the space an agent occupies.
 ///
-/// Each spring can be a persistent `claude` process running in a
-/// tmux window. The session remembers the conversation naturally --
-/// vapor flows without explicit management.
+/// The vessel is not the spring. It is the window through which
+/// you perceive the mountain. Each tmux window holds a persistent
+/// Claude process, and the conversation flows naturally within
+/// those walls without the system carrying the water's memory.
 ///
 /// tmux session layout:
 /// ```text
 /// tao-flow (session)
-///   mountain (window) — claude --model opus, persistent
-///   desert   (window) — claude --model haiku, persistent
-///   forest   (window) — claude --model sonnet, persistent
+///   mountain (window) — claude, persistent, deep reasoning
+///   desert   (window) — claude, persistent, quick responses
+///   forest   (window) — claude, persistent, creative synthesis
 /// ```
 ///
 /// "Returning is the motion of the Tao." -- Chapter 40
 /// The conversation cycles naturally, each exchange deepening
 /// the riverbed without the system carrying the water's memory.
-pub struct TmuxProvider {
+pub struct TmuxVessel {
     session: String,
     window: String,
     model: String,
     initialized: bool,
 }
 
-impl TmuxProvider {
+impl TmuxVessel {
     pub fn new(
         session: impl Into<String>,
         window: impl Into<String>,
@@ -47,7 +46,7 @@ impl TmuxProvider {
     }
 
     /// Ensure the tmux session and window exist with a claude process.
-    pub async fn initialize(&mut self, system_prompt: &str) -> Result<(), FlowError> {
+    pub async fn prepare(&mut self, system_prompt: &str) -> Result<(), FlowError> {
         if self.initialized {
             return Ok(());
         }
@@ -83,22 +82,7 @@ impl TmuxProvider {
                 ));
             }
 
-            // Start claude in the window
-            let claude_cmd = format!(
-                "claude --model {} --system-prompt '{}'",
-                self.model,
-                system_prompt.replace('\'', "'\\''")
-            );
-            Command::new("tmux")
-                .args(["send-keys", "-t", &self.target(), &claude_cmd, "Enter"])
-                .status()
-                .await
-                .map_err(|e| {
-                    FlowError::ConfigError(format!("Failed to start claude in tmux: {e}"))
-                })?;
-
-            // Give claude a moment to start
-            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+            self.start_claude(system_prompt).await?;
         } else {
             // Session exists; check if window exists
             let has_window = Command::new("tmux")
@@ -121,40 +105,38 @@ impl TmuxProvider {
                         FlowError::ConfigError(format!("Failed to create tmux window: {e}"))
                     })?;
 
-                let claude_cmd = format!(
-                    "claude --model {} --system-prompt '{}'",
-                    self.model,
-                    system_prompt.replace('\'', "'\\''")
-                );
-                Command::new("tmux")
-                    .args(["send-keys", "-t", &self.target(), &claude_cmd, "Enter"])
-                    .status()
-                    .await
-                    .map_err(|e| {
-                        FlowError::ConfigError(format!("Failed to start claude in tmux: {e}"))
-                    })?;
-
-                tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+                self.start_claude(system_prompt).await?;
             }
         }
 
         self.initialized = true;
         Ok(())
     }
-}
 
-#[async_trait]
-impl LlmProvider for TmuxProvider {
-    async fn complete(&self, _system: &str, messages: &[ChatMessage]) -> Result<String, FlowError> {
-        // For tmux sessions, the system prompt was set at initialization.
-        // We only send the latest user message -- the session remembers
-        // the conversation naturally.
-        let prompt = messages
-            .last()
-            .map(|m| m.content.clone())
-            .unwrap_or_default();
+    /// Start a claude process inside this vessel's window.
+    async fn start_claude(&self, system_prompt: &str) -> Result<(), FlowError> {
+        let claude_cmd = format!(
+            "claude --model {} --system-prompt '{}'",
+            self.model,
+            system_prompt.replace('\'', "'\\''")
+        );
+        Command::new("tmux")
+            .args(["send-keys", "-t", &self.target(), &claude_cmd, "Enter"])
+            .status()
+            .await
+            .map_err(|e| FlowError::ConfigError(format!("Failed to start claude in tmux: {e}")))?;
 
-        if prompt.is_empty() {
+        // Give claude a moment to start
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        Ok(())
+    }
+
+    /// Send a message through the vessel and capture the response.
+    ///
+    /// The vessel sends input to the tmux pane and waits for the
+    /// output to stabilize -- the water settles in the vessel.
+    pub async fn send(&self, input: &str) -> Result<String, FlowError> {
+        if input.is_empty() {
             return Ok(String::new());
         }
 
@@ -165,9 +147,9 @@ impl LlmProvider for TmuxProvider {
             .await
             .ok();
 
-        // Send the prompt
+        // Send the input
         Command::new("tmux")
-            .args(["send-keys", "-t", &self.target(), &prompt, "Enter"])
+            .args(["send-keys", "-t", &self.target(), input, "Enter"])
             .status()
             .await
             .map_err(|e| FlowError::SpringFailure {
@@ -175,10 +157,7 @@ impl LlmProvider for TmuxProvider {
                 reason: format!("Failed to send to tmux: {e}"),
             })?;
 
-        // Wait for response -- this is the hard part.
-        // We poll the pane content until it stops changing.
-        // This is a simple approach; a more sophisticated one would
-        // watch for the prompt marker.
+        // Wait for response -- poll until the pane content stabilizes.
         let mut last_content = String::new();
         let mut stable_count = 0;
         let max_wait = 60; // seconds
@@ -210,17 +189,27 @@ impl LlmProvider for TmuxProvider {
             }
         }
 
-        // Extract the response (everything after our prompt)
+        // Extract the response (everything after the input)
         let response = last_content
             .lines()
-            .skip_while(|line| !line.contains(&prompt))
-            .skip(1) // skip the prompt line itself
+            .skip_while(|line| !line.contains(input))
+            .skip(1) // skip the input line itself
             .collect::<Vec<_>>()
             .join("\n")
             .trim()
             .to_string();
 
         Ok(response)
+    }
+
+    /// The name of this vessel's window.
+    pub fn window_name(&self) -> &str {
+        &self.window
+    }
+
+    /// The model running inside this vessel.
+    pub fn model(&self) -> &str {
+        &self.model
     }
 }
 
@@ -230,7 +219,14 @@ mod tests {
 
     #[test]
     fn tmux_target_format() {
-        let provider = TmuxProvider::new("tao-flow", "mountain", "claude-opus-4-6");
-        assert_eq!(provider.target(), "tao-flow:mountain");
+        let vessel = TmuxVessel::new("tao-flow", "mountain", "claude-opus-4-6");
+        assert_eq!(vessel.target(), "tao-flow:mountain");
+    }
+
+    #[test]
+    fn vessel_knows_its_window() {
+        let vessel = TmuxVessel::new("tao-flow", "desert", "claude-haiku-4-5-20251001");
+        assert_eq!(vessel.window_name(), "desert");
+        assert_eq!(vessel.model(), "claude-haiku-4-5-20251001");
     }
 }
