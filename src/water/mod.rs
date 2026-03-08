@@ -8,4 +8,4 @@ pub use ocean::Ocean;
 pub use rain::Rain;
 pub use river::River;
 pub use stream::Stream;
-pub use vapor::{Message, Preferences, Role, SessionContext, Vapor};
+pub use vapor::{Message, Role, Vapor};

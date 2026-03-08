@@ -20,11 +20,6 @@ When you receive input:
 You are one voice among several. You do not need to be complete.
 Offer your unique depth and trust that other springs will offer theirs.";
 
-/// Mountain Spring -- deep reasoning, analysis, architecture.
-///
-/// Slow, cold, mineral-rich. Best for complex analysis,
-/// philosophy, architecture. Like water emerging from deep
-/// within the earth, carrying the minerals of long contemplation.
 pub struct MountainSpring {
     config: SpringConfig,
     source: Box<dyn LlmSource>,

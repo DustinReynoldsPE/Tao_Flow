@@ -1,8 +1,5 @@
 use thiserror::Error;
 
-/// Errors that arise as eddies in the flow.
-///
-/// "Failure is an opportunity." -- Tao Te Ching, Chapter 79
 #[derive(Error, Debug)]
 pub enum FlowError {
     #[error("Spring '{name}' failed to respond: {reason}")]
@@ -17,8 +14,8 @@ pub enum FlowError {
     #[error("Still Lake failed to clarify: {0}")]
     ClarityFailure(String),
 
-    #[error("LLM provider error: {0}")]
-    ProviderError(#[from] reqwest::Error),
+    #[error("Source error: {0}")]
+    SourceError(#[from] reqwest::Error),
 
     #[error("Configuration error: {0}")]
     ConfigError(String),

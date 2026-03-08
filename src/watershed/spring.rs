@@ -5,34 +5,14 @@ use async_trait::async_trait;
 use crate::error::FlowError;
 use crate::water::{Rain, Stream};
 
-/// A spring in the watershed. Each spring wraps an LLM
-/// and responds to rain according to its nature.
-///
-/// The trait is the empty pot -- it defines the shape,
-/// the emptiness, and leaves each spring free to fill it.
-///
-/// "The supreme good is like water, which nourishes
-/// all things without trying to." -- Chapter 8
 #[async_trait]
 pub trait Spring: Send + Sync {
-    /// The spring's name -- its identity in the watershed.
     fn name(&self) -> &str;
-
-    /// The spring's nature -- what it naturally provides.
     fn nature(&self) -> &str;
-
-    /// How strongly does this spring resonate with this rain?
     fn sense_relevance(&self, rain: &Rain) -> f32;
-
-    /// Respond to rain according to nature.
-    /// Returns None if this spring has nothing to contribute
-    /// (a dry spring -- natural and valid).
     async fn respond(&self, rain: &Rain) -> Result<Option<Stream>, FlowError>;
 }
 
-/// Base configuration shared by all springs.
-/// This is the common ground from which each spring's
-/// unique nature grows.
 #[derive(Debug, Clone)]
 pub struct SpringConfig {
     pub name: String,
@@ -41,8 +21,6 @@ pub struct SpringConfig {
 }
 
 impl SpringConfig {
-    /// Sense how relevant this spring is to the given rain,
-    /// based on mineral-affinity resonance.
     pub fn sense_relevance(&self, rain: &Rain) -> f32 {
         let mut score: f32 = 0.3; // Base -- every spring has something to offer
         for mineral in &rain.minerals {

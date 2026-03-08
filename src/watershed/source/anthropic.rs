@@ -5,10 +5,7 @@ use serde::{Deserialize, Serialize};
 use super::{ChatMessage, ChatRole, LlmSource};
 use crate::error::FlowError;
 
-/// Anthropic API source -- Claude models via direct API.
-///
-/// For those who choose to pay for the water directly.
-/// The API is the commercial well -- reliable, metered, clear.
+/// Anthropic API via direct HTTP calls.
 pub struct AnthropicSource {
     client: Client,
     api_key: String,

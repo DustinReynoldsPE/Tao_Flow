@@ -4,17 +4,7 @@ use tokio::process::Command;
 use super::{ChatMessage, ChatRole, LlmSource};
 use crate::error::FlowError;
 
-/// Claude CLI source -- uses `claude -p` (print mode).
-///
-/// This is the natural spring. A Claude Max user already has
-/// the river flowing. The system simply drinks from it.
-///
-/// No API keys. No per-token pricing. No artificial barriers.
-/// Just the CLI that's already on the machine, already logged in.
-///
-/// "The supreme good is like water, which nourishes all things
-/// without trying to. It is content with the low places that
-/// people disdain." -- Tao Te Ching, Chapter 8
+/// Uses `claude -p` (print mode). No API keys needed.
 pub struct ClaudeCliSource {
     model: String,
     max_tokens: Option<u32>,

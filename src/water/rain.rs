@@ -16,36 +16,24 @@ pub enum Volume {
 }
 
 /// User input -- undifferentiated, natural.
-///
-/// Like rain, it has not yet found its course. It falls
-/// upon the watershed and each spring responds according
-/// to its nature.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Rain {
     pub raw_input: String,
     pub vapor: Vapor,
     pub volume: Volume,
-    /// -1.0 (ice cold, analytical) to 1.0 (warm, emotional)
-    pub temperature: f32,
-    /// Detected domains and themes
     pub minerals: Vec<String>,
 }
 
 impl Rain {
-    /// Create new rain from raw user input.
     pub fn new(input: impl Into<String>, vapor: Vapor) -> Self {
         Self {
             raw_input: input.into(),
             vapor,
-            volume: Volume::Shower, // Default; the VolumeSensor will refine
-            temperature: 0.0,
+            volume: Volume::Shower,
             minerals: Vec::new(),
         }
     }
 
-    /// The weight of the rain -- a simple heuristic for volume.
-    /// The VolumeSensor will provide a more nuanced assessment,
-    /// but this gives the watershed an initial sense.
     pub fn weight(&self) -> usize {
         self.raw_input.split_whitespace().count()
     }
