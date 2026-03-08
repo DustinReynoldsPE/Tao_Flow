@@ -2,11 +2,15 @@ use tokio::process::Command;
 
 use crate::error::FlowError;
 
-/// Manages a persistent Claude process in a tmux window.
+/// Manages a persistent process in a tmux window.
+///
+/// The vessel is the pot, not the water. By default it starts
+/// a claude process, but `with_command` lets any process fill it.
 pub struct TmuxVessel {
     session: String,
     window: String,
     model: String,
+    command: Option<String>,
     initialized: bool,
 }
 
@@ -20,8 +24,17 @@ impl TmuxVessel {
             session: session.into(),
             window: window.into(),
             model: model.into(),
+            command: None,
             initialized: false,
         }
+    }
+
+    /// Override the process started in this vessel's window.
+    /// By default, the vessel starts claude. Use this for testing
+    /// with echo processes or other programs.
+    pub fn with_command(mut self, command: impl Into<String>) -> Self {
+        self.command = Some(command.into());
+        self
     }
 
     fn target(&self) -> String {
@@ -65,7 +78,7 @@ impl TmuxVessel {
                 ));
             }
 
-            self.start_claude(system_prompt).await?;
+            self.start_process(system_prompt).await?;
         } else {
             // Session exists; check if window exists
             let has_window = Command::new("tmux")
@@ -88,7 +101,7 @@ impl TmuxVessel {
                         FlowError::ConfigError(format!("Failed to create tmux window: {e}"))
                     })?;
 
-                self.start_claude(system_prompt).await?;
+                self.start_process(system_prompt).await?;
             }
         }
 
@@ -96,20 +109,24 @@ impl TmuxVessel {
         Ok(())
     }
 
-    /// Start a claude process inside this vessel's window.
-    async fn start_claude(&self, system_prompt: &str) -> Result<(), FlowError> {
-        let claude_cmd = format!(
-            "claude --model {} --system-prompt '{}'",
-            self.model,
-            system_prompt.replace('\'', "'\\''")
-        );
+    /// Start a process inside this vessel's window.
+    async fn start_process(&self, system_prompt: &str) -> Result<(), FlowError> {
+        let cmd = match self.command {
+            Some(ref custom) => custom.clone(),
+            None => format!(
+                "claude --model {} --system-prompt '{}'",
+                self.model,
+                system_prompt.replace('\'', "'\\''")
+            ),
+        };
+
         Command::new("tmux")
-            .args(["send-keys", "-t", &self.target(), &claude_cmd, "Enter"])
+            .args(["send-keys", "-t", &self.target(), &cmd, "Enter"])
             .status()
             .await
-            .map_err(|e| FlowError::ConfigError(format!("Failed to start claude in tmux: {e}")))?;
+            .map_err(|e| FlowError::ConfigError(format!("Failed to start process in tmux: {e}")))?;
 
-        // Give claude a moment to start
+        // Give the process a moment to start
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
         Ok(())
     }
@@ -183,6 +200,16 @@ impl TmuxVessel {
             .to_string();
 
         Ok(response)
+    }
+
+    /// Kill the tmux session this vessel belongs to.
+    pub async fn teardown(&self) -> Result<(), FlowError> {
+        Command::new("tmux")
+            .args(["kill-session", "-t", &self.session])
+            .status()
+            .await
+            .map_err(|e| FlowError::ConfigError(format!("Failed to kill tmux session: {e}")))?;
+        Ok(())
     }
 
     /// The name of this vessel's window.
