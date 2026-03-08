@@ -30,7 +30,7 @@ cargo test --all-targets
 src/
   water/          # Core types: Vapor, Rain, Stream, River, Ocean
   watershed/      # Spring trait, VolumeSensor, spring implementations
-    source/       # LlmSource trait, ClaudeCliSource, AnthropicSource
+    source/       # LlmSource trait, ClaudeCliSource, LlamaSource
   vessel/         # tmux session management (the window, not the mountain)
   confluence/     # Eddy detection, yielding, stream merging
   still_lake/     # Final refinement (the five questions)
