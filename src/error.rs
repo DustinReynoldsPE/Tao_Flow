@@ -14,6 +14,9 @@ pub enum FlowError {
     #[error("Still Lake failed to clarify: {0}")]
     ClarityFailure(String),
 
+    #[error("Decomposition failed: {0}")]
+    DecompositionFailure(String),
+
     #[error("Source error: {0}")]
     SourceError(#[from] reqwest::Error),
 

@@ -1,6 +1,4 @@
-pub mod config;
 pub mod confluence;
-pub mod creation;
 pub mod error;
 pub mod flow;
 pub mod still_lake;
@@ -8,7 +6,7 @@ pub mod vessel;
 pub mod water;
 pub mod watershed;
 
-pub use confluence::ConfluencePool;
+pub use confluence::{ConfluencePool, Decomposer};
 pub use error::FlowError;
 pub use flow::TaoFlow;
 pub use still_lake::StillLake;

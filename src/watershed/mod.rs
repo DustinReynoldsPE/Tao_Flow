@@ -1,8 +1,10 @@
+pub mod mineral_classifier;
 pub mod source;
 pub mod spring;
 pub mod springs;
 pub mod volume_sensor;
 
+pub use mineral_classifier::MineralClassifier;
 pub use source::{ChatMessage, ChatRole, LlmSource};
 pub use spring::Spring;
 pub use springs::{DesertSpring, ForestSpring, MountainSpring};
@@ -26,7 +28,12 @@ impl Watershed {
 
     pub async fn receive_rain(&self, rain: &mut Rain) -> Vec<Stream> {
         rain.volume = self.volume_sensor.sense(rain);
-        let active_springs = self.activate_springs(rain.volume);
+
+        if rain.minerals.is_empty() {
+            rain.minerals = MineralClassifier::classify(&rain.raw_input);
+        }
+
+        let active_springs = self.activate_springs(rain);
 
         let handles: Vec<_> = active_springs
             .iter()
@@ -40,8 +47,8 @@ impl Watershed {
             .collect()
     }
 
-    fn activate_springs(&self, volume: Volume) -> Vec<&dyn Spring> {
-        match volume {
+    fn activate_springs(&self, rain: &Rain) -> Vec<&dyn Spring> {
+        match rain.volume {
             Volume::Droplet => {
                 let desert: Vec<_> = self
                     .springs
@@ -55,7 +62,23 @@ impl Watershed {
                     desert
                 }
             }
-            Volume::Shower => self.springs.iter().take(2).map(|s| s.as_ref()).collect(),
+            Volume::Shower => {
+                // Select the 2 most relevant springs.
+                // Stable tiebreak by insertion order preserves existing behavior
+                // when all springs have equal relevance (no mineral matches).
+                let mut scored: Vec<_> = self
+                    .springs
+                    .iter()
+                    .enumerate()
+                    .map(|(i, s)| (s.sense_relevance(rain), i, s.as_ref()))
+                    .collect();
+                scored.sort_by(|a, b| {
+                    b.0.partial_cmp(&a.0)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                        .then(a.1.cmp(&b.1))
+                });
+                scored.into_iter().take(2).map(|(_, _, s)| s).collect()
+            }
             Volume::Downpour | Volume::Storm => self.springs.iter().map(|s| s.as_ref()).collect(),
         }
     }
