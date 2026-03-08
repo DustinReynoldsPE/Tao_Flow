@@ -42,8 +42,18 @@ src/
 
 ## Skills
 
-Use `/riverbank`, `/spring`, `/vessel`, `/still-lake`, `/rain`, `/confluence`, `/flow`.
+Use `/riverbank`, `/spring`, `/vessel`, `/still-lake`, `/rain`, `/confluence`, `/flow`, `/reflecting-pool`.
 See `docs/implementation.md` "Skills: Teaching the Builder" for details.
+
+## The Journey
+
+This system was built phase by phase, each followed by reflection. The reflections carry lessons that no instruction can replace. Before starting a new phase, read:
+
+1. `docs/philosophy.md` — the foundation
+2. `docs/*reflections.md` — what was learned, in the order it was learned
+3. `docs/implementation.md` — the vision ahead (pseudocode and prose, not code)
+
+The creation of Tao Flow is itself the template for what the system will do. Philosophy first, then architecture, then implementation, then phases with reflection. The system should create the same way.
 
 ## Principles
 
