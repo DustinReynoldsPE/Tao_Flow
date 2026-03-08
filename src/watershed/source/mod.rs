@@ -5,31 +5,20 @@ use async_trait::async_trait;
 
 use crate::error::FlowError;
 
-/// A message sent to an underground source.
 #[derive(Debug, Clone)]
 pub struct ChatMessage {
     pub role: ChatRole,
     pub content: String,
 }
 
-/// Role in a chat conversation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChatRole {
     User,
     Assistant,
 }
 
-/// The underground source -- the aquifer that feeds each spring.
-///
-/// Every spring draws from an underground source. The source
-/// is hidden, deep, formless. What matters is the water that
-/// emerges, not the rock it passes through.
-///
-/// "We shape clay into a pot, but it is the emptiness inside
-/// that holds whatever we want." -- Tao Te Ching, Chapter 11
 #[async_trait]
 pub trait LlmSource: Send + Sync {
-    /// Draw water from the source.
     async fn complete(&self, system: &str, messages: &[ChatMessage]) -> Result<String, FlowError>;
 }
 
@@ -37,8 +26,6 @@ pub trait LlmSource: Send + Sync {
 pub mod mock {
     use super::*;
 
-    /// A mock source that returns a predetermined response.
-    /// For testing -- the spring flows without calling any API.
     pub struct MockSource {
         pub response: String,
     }
@@ -62,8 +49,6 @@ pub mod mock {
         }
     }
 
-    /// A mock source that echoes the user's last message.
-    /// Useful for testing that input flows through correctly.
     pub struct EchoSource;
 
     #[async_trait]
@@ -82,7 +67,6 @@ pub mod mock {
         }
     }
 
-    /// A mock source that always fails -- a dry well.
     pub struct DrySource;
 
     #[async_trait]

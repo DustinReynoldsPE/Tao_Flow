@@ -2,11 +2,6 @@ use crate::error::FlowError;
 use crate::water::{Message, Ocean, Rain, River, Role, Stream, Vapor};
 use crate::watershed::Watershed;
 
-/// The complete system. Rain to Ocean.
-///
-/// "The Tao gives birth to One. One gives birth to Two.
-///  Two gives birth to Three.
-///  Three gives birth to ten thousand things." -- Chapter 42
 pub struct TaoFlow {
     watershed: Watershed,
     vapor: Vapor,
@@ -20,41 +15,22 @@ impl TaoFlow {
         }
     }
 
-    /// The complete journey from rain to ocean.
-    ///
-    /// Phase 2: Two springs, simple merge. The Confluence Pool
-    /// and Still Lake will deepen this flow in later phases.
     pub async fn flow(&mut self, user_input: &str) -> Result<String, FlowError> {
-        // Rain falls
         let mut rain = Rain::new(user_input, self.vapor.clone());
-
-        // Springs respond
         let streams = self.watershed.receive_rain(&mut rain).await;
 
         if streams.is_empty() {
             return Err(FlowError::Drought);
         }
 
-        // Simple merge (Phase 2) -- select the deepest stream.
-        // The full Confluence Pool comes in Phase 3.
         let river = Self::simple_merge(streams);
-
-        // Simple pass-through (Phase 2) -- the Still Lake comes in Phase 5.
         let ocean = Ocean::new(river.content);
-
-        // Update vapor for next cycle (the water cycle)
         self.update_vapor(&rain, &ocean);
 
         Ok(ocean.content)
     }
 
-    /// Simple merge: when few streams flow, the deepest carries the river.
-    ///
-    /// "When nothing is done, nothing is left undone." -- Chapter 48
-    ///
-    /// In Phase 2, we do the minimum: pick the stream with the
-    /// greatest depth. The full Confluence (Phase 3) will weave
-    /// multiple streams into a richer river.
+    /// Pick the deepest stream. Full confluence comes later.
     fn simple_merge(streams: Vec<Stream>) -> River {
         debug_assert!(!streams.is_empty());
 
@@ -79,7 +55,6 @@ impl TaoFlow {
         }
     }
 
-    /// The water cycle -- output becomes context for next input.
     fn update_vapor(&mut self, rain: &Rain, ocean: &Ocean) {
         self.vapor.conversation_history.push(Message {
             role: Role::User,
@@ -91,7 +66,6 @@ impl TaoFlow {
         });
     }
 
-    /// Access the current vapor (for testing).
     pub fn vapor(&self) -> &Vapor {
         &self.vapor
     }

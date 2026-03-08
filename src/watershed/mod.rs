@@ -11,12 +11,6 @@ pub use volume_sensor::VolumeSensor;
 use crate::water::rain::Volume;
 use crate::water::{Rain, Stream};
 
-/// The watershed does not decide where rain goes.
-/// It simply has a shape, and water follows that shape.
-///
-/// "Man follows the earth. Earth follows the universe.
-///  The universe follows the Tao. The Tao follows only itself."
-///  -- Tao Te Ching, Chapter 25
 pub struct Watershed {
     springs: Vec<Box<dyn Spring>>,
     volume_sensor: VolumeSensor,
@@ -30,24 +24,16 @@ impl Watershed {
         }
     }
 
-    /// All springs receive rain. Each responds according to its nature.
     pub async fn receive_rain(&self, rain: &mut Rain) -> Vec<Stream> {
-        // Sense the volume
         rain.volume = self.volume_sensor.sense(rain);
-
-        // Select springs based on volume (wu wei -- minimal intervention)
         let active_springs = self.activate_springs(rain.volume);
 
-        // All active springs flow simultaneously.
-        // Rain is shared -- all springs read the same rain.
         let handles: Vec<_> = active_springs
             .iter()
             .map(|spring| spring.respond(rain))
             .collect();
 
         let results = futures::future::join_all(handles).await;
-
-        // Gather the streams, filtering dry springs
         results
             .into_iter()
             .filter_map(|r| r.ok().flatten())
@@ -57,7 +43,6 @@ impl Watershed {
     fn activate_springs(&self, volume: Volume) -> Vec<&dyn Spring> {
         match volume {
             Volume::Droplet => {
-                // Only desert springs -- light rain, quick response
                 let desert: Vec<_> = self
                     .springs
                     .iter()
@@ -65,24 +50,16 @@ impl Watershed {
                     .map(|s| s.as_ref())
                     .collect();
                 if desert.is_empty() {
-                    // If no desert spring, use the first available
                     self.springs.iter().take(1).map(|s| s.as_ref()).collect()
                 } else {
                     desert
                 }
             }
-            Volume::Shower => {
-                // The two most relevant springs
-                self.springs.iter().take(2).map(|s| s.as_ref()).collect()
-            }
-            Volume::Downpour | Volume::Storm => {
-                // All springs flow
-                self.springs.iter().map(|s| s.as_ref()).collect()
-            }
+            Volume::Shower => self.springs.iter().take(2).map(|s| s.as_ref()).collect(),
+            Volume::Downpour | Volume::Storm => self.springs.iter().map(|s| s.as_ref()).collect(),
         }
     }
 
-    /// How many springs are in this watershed?
     pub fn spring_count(&self) -> usize {
         self.springs.len()
     }

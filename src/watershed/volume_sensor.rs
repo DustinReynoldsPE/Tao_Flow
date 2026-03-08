@@ -1,17 +1,6 @@
 use crate::water::rain::{Rain, Volume};
 
-/// The Volume Sensor -- the gentlest possible touch.
-///
-/// It senses the weight of the rain and determines how many
-/// springs should respond. This is the one place where the
-/// system makes an active routing decision, but even this
-/// follows wu wei -- a single classification that opens or
-/// closes valves.
-///
-/// "The ancient Masters were careful as someone crossing
-/// an iced-over stream." -- Tao Te Ching, Chapter 15
 pub struct VolumeSensor {
-    /// Word count threshold for each volume level
     droplet_max: usize,
     shower_max: usize,
     downpour_max: usize,
@@ -26,12 +15,6 @@ impl VolumeSensor {
         }
     }
 
-    /// Sense the volume of the rain.
-    ///
-    /// For now, this is a simple heuristic based on word count.
-    /// In later phases, a lightweight LLM pass will provide
-    /// a more nuanced assessment. But even this simple sensing
-    /// follows the shape of the watershed.
     pub fn sense(&self, rain: &Rain) -> Volume {
         let weight = rain.weight();
         if weight <= self.droplet_max {

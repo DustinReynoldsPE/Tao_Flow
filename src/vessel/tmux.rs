@@ -2,24 +2,7 @@ use tokio::process::Command;
 
 use crate::error::FlowError;
 
-/// A tmux vessel -- the walls that hold the space an agent occupies.
-///
-/// The vessel is not the spring. It is the window through which
-/// you perceive the mountain. Each tmux window holds a persistent
-/// Claude process, and the conversation flows naturally within
-/// those walls without the system carrying the water's memory.
-///
-/// tmux session layout:
-/// ```text
-/// tao-flow (session)
-///   mountain (window) — claude, persistent, deep reasoning
-///   desert   (window) — claude, persistent, quick responses
-///   forest   (window) — claude, persistent, creative synthesis
-/// ```
-///
-/// "Returning is the motion of the Tao." -- Chapter 40
-/// The conversation cycles naturally, each exchange deepening
-/// the riverbed without the system carrying the water's memory.
+/// Manages a persistent Claude process in a tmux window.
 pub struct TmuxVessel {
     session: String,
     window: String,

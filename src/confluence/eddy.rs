@@ -1,47 +1,28 @@
 use serde::{Deserialize, Serialize};
 
-/// The nature of an eddy -- how streams disagree.
-///
-/// Different natures resolve differently, the way different
-/// kinds of turbulence settle in different ways.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EddyNature {
-    /// One stream is right, one is wrong. Can be verified.
     Factual,
-    /// Both streams may be valid. Richness, not conflict.
     Interpretive,
-    /// Different tone or voice. Diversity, not disagreement.
     Stylistic,
-    /// Different organization of the same truth.
     Structural,
 }
 
-/// A position within an eddy -- one stream's view.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Position {
-    /// Which spring holds this view
     pub source: String,
-    /// The view itself
     pub view: String,
 }
 
 /// A point of divergence between streams.
-///
-/// When two rivers meet at an angle, turbulence is natural.
-/// The turbulence is not wrong. It is the process by which
-/// two waters become one.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Eddy {
-    /// What the disagreement is about
     pub topic: String,
-    /// The different positions held by streams
     pub positions: Vec<Position>,
-    /// The nature of the divergence
     pub nature: EddyNature,
 }
 
 impl Eddy {
-    /// Create a new eddy from two diverging streams.
     pub fn new(topic: impl Into<String>, nature: EddyNature, positions: Vec<Position>) -> Self {
         Self {
             topic: topic.into(),
@@ -50,12 +31,10 @@ impl Eddy {
         }
     }
 
-    /// How many streams are involved in this eddy?
     pub fn stream_count(&self) -> usize {
         self.positions.len()
     }
 
-    /// Is this a factual disagreement that can be verified?
     pub fn is_verifiable(&self) -> bool {
         self.nature == EddyNature::Factual
     }

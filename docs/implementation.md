@@ -7,11 +7,7 @@
 
 ## The Uncarved Block
 
-This document translates the philosophy into practical implementation. But remember:
-
-*"The Tao that can be told is not the eternal Tao."*
-
-The implementation is not the system. The system is the emptiness that the implementation creates. Do not mistake the code for the Tao.
+This document is a vision — the shape the water may take. The code is the water. Where they diverge, trust the code. Code examples below are illustrative, not literal; the source of truth lives in `src/`.
 
 ---
 

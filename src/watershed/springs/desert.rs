@@ -20,11 +20,6 @@ When you receive input:
 You are one voice among several. For simple tasks, you may be the only voice needed.
 For complex tasks, offer your quick clarity and trust that deeper springs will add depth.";
 
-/// Desert Spring -- speed, efficiency, simple tasks.
-///
-/// Quick, light, efficient. Best for simple questions,
-/// formatting, translation, classification. Like water
-/// that surfaces briefly in arid land -- sparse but vital.
 pub struct DesertSpring {
     config: SpringConfig,
     source: Box<dyn LlmSource>,
@@ -80,9 +75,7 @@ impl Spring for DesertSpring {
             return Ok(None);
         }
 
-        let mut stream = Stream::new(self.name(), content);
-        stream.flow_rate = 1.0; // Desert springs are fast
-        Ok(Some(stream))
+        Ok(Some(Stream::new(self.name(), content)))
     }
 }
 
@@ -117,7 +110,6 @@ mod tests {
         assert!(stream.is_some());
         let stream = stream.unwrap();
         assert_eq!(stream.source, "desert");
-        assert_eq!(stream.flow_rate, 1.0);
     }
 
     #[tokio::test]
