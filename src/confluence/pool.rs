@@ -2,8 +2,8 @@ use crate::confluence::detection::EddyDetector;
 use crate::confluence::yielding::YieldingProtocol;
 use crate::confluence::Eddy;
 use crate::error::FlowError;
-use crate::water::{River, Stream};
-use crate::watershed::source::{ChatMessage, ChatRole, LlmSource};
+use crate::water::{River, Role, Stream};
+use crate::watershed::source::{ChatMessage, LlmSource};
 
 /// Where streams merge into a river.
 ///
@@ -92,7 +92,7 @@ impl ConfluencePool {
         }
 
         let messages = vec![ChatMessage {
-            role: ChatRole::User,
+            role: Role::User,
             content: prompt,
         }];
 

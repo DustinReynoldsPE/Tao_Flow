@@ -1,5 +1,6 @@
 use crate::confluence::Eddy;
-use crate::watershed::source::{ChatMessage, ChatRole, LlmSource};
+use crate::water::Role;
+use crate::watershed::source::{ChatMessage, LlmSource};
 
 /// Resolves eddies through yielding — each position finds truth in the other.
 ///
@@ -18,7 +19,7 @@ impl<'a> YieldingProtocol<'a> {
     pub async fn yield_eddy(&self, eddy: &mut Eddy) {
         let prompt = self.build_yielding_prompt(eddy);
         let messages = vec![ChatMessage {
-            role: ChatRole::User,
+            role: Role::User,
             content: prompt,
         }];
 

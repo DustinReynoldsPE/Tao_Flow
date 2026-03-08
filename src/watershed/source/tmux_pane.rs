@@ -1,9 +1,10 @@
 use async_trait::async_trait;
 use tokio::sync::Mutex;
 
-use super::{ChatMessage, ChatRole, LlmSource};
+use super::{ChatMessage, LlmSource};
 use crate::error::FlowError;
 use crate::vessel::TmuxVessel;
+use crate::water::Role;
 
 /// An LlmSource backed by a persistent tmux pane.
 ///
@@ -34,7 +35,7 @@ impl LlmSource for TmuxPaneSource {
 
         let last_user_message = messages
             .iter()
-            .rfind(|m| m.role == ChatRole::User)
+            .rfind(|m| m.role == Role::User)
             .map(|m| m.content.as_str())
             .unwrap_or("");
 

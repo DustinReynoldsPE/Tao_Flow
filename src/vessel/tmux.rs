@@ -63,7 +63,7 @@ impl TmuxVessel {
         // Check if tmux is available
         let tmux_check = Command::new("tmux").arg("-V").output().await;
         if tmux_check.is_err() || !tmux_check.unwrap().status.success() {
-            return Err(FlowError::ConfigError(
+            return Err(FlowError::VesselError(
                 "tmux is not installed or not available".into(),
             ));
         }
@@ -82,11 +82,11 @@ impl TmuxVessel {
                 .status()
                 .await
                 .map_err(|e| {
-                    FlowError::ConfigError(format!("Failed to create tmux session: {e}"))
+                    FlowError::VesselError(format!("Failed to create tmux session: {e}"))
                 })?;
 
             if !status.success() {
-                return Err(FlowError::ConfigError(
+                return Err(FlowError::VesselError(
                     "Failed to create tmux session".into(),
                 ));
             }
@@ -111,7 +111,7 @@ impl TmuxVessel {
                     .status()
                     .await
                     .map_err(|e| {
-                        FlowError::ConfigError(format!("Failed to create tmux window: {e}"))
+                        FlowError::VesselError(format!("Failed to create tmux window: {e}"))
                     })?;
 
                 self.start_process(system_prompt).await?;
@@ -137,7 +137,7 @@ impl TmuxVessel {
             .args(["send-keys", "-t", &self.target(), &cmd, "Enter"])
             .status()
             .await
-            .map_err(|e| FlowError::ConfigError(format!("Failed to start process in tmux: {e}")))?;
+            .map_err(|e| FlowError::VesselError(format!("Failed to start process in tmux: {e}")))?;
 
         // Give the process a moment to start
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
@@ -264,7 +264,7 @@ impl TmuxVessel {
             .args(["kill-session", "-t", &self.session])
             .status()
             .await
-            .map_err(|e| FlowError::ConfigError(format!("Failed to kill tmux session: {e}")))?;
+            .map_err(|e| FlowError::VesselError(format!("Failed to kill tmux session: {e}")))?;
         Ok(())
     }
 

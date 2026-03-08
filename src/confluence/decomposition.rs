@@ -1,5 +1,6 @@
 use crate::error::FlowError;
-use crate::watershed::source::{ChatMessage, ChatRole, LlmSource};
+use crate::water::Role;
+use crate::watershed::source::{ChatMessage, LlmSource};
 
 /// Breaks Storm-level rain into independent sub-questions.
 ///
@@ -16,7 +17,7 @@ impl Decomposer {
 
     pub async fn decompose(&self, input: &str) -> Result<Vec<String>, FlowError> {
         let messages = vec![ChatMessage {
-            role: ChatRole::User,
+            role: Role::User,
             content: format!(
                 "Break this complex request into 2-5 independent sub-questions. \
                  Each sub-question should be answerable on its own and contribute \

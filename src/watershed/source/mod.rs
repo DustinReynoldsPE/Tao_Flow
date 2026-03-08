@@ -5,17 +5,12 @@ pub mod tmux_pane;
 use async_trait::async_trait;
 
 use crate::error::FlowError;
+use crate::water::Role;
 
 #[derive(Debug, Clone)]
 pub struct ChatMessage {
-    pub role: ChatRole,
+    pub role: Role,
     pub content: String,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ChatRole {
-    User,
-    Assistant,
 }
 
 #[async_trait]
@@ -61,7 +56,7 @@ pub mod mock {
         ) -> Result<String, FlowError> {
             let last = messages
                 .iter()
-                .rfind(|m| m.role == ChatRole::User)
+                .rfind(|m| m.role == Role::User)
                 .map(|m| m.content.clone())
                 .unwrap_or_default();
             Ok(last)
@@ -100,15 +95,15 @@ pub mod mock {
             let source = EchoSource;
             let messages = vec![
                 ChatMessage {
-                    role: ChatRole::User,
+                    role: Role::User,
                     content: "What is water?".into(),
                 },
                 ChatMessage {
-                    role: ChatRole::Assistant,
+                    role: Role::Assistant,
                     content: "Water is life.".into(),
                 },
                 ChatMessage {
-                    role: ChatRole::User,
+                    role: Role::User,
                     content: "Tell me more.".into(),
                 },
             ];

@@ -1,6 +1,7 @@
 use crate::confluence::{Eddy, EddyNature, Position};
+use crate::water::Role;
 use crate::water::Stream;
-use crate::watershed::source::{ChatMessage, ChatRole, LlmSource};
+use crate::watershed::source::{ChatMessage, LlmSource};
 
 /// Analyzes streams to find where they diverge.
 ///
@@ -23,7 +24,7 @@ impl<'a> EddyDetector<'a> {
 
         let prompt = self.build_detection_prompt(streams, rain_input);
         let messages = vec![ChatMessage {
-            role: ChatRole::User,
+            role: Role::User,
             content: prompt,
         }];
 

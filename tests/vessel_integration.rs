@@ -6,7 +6,8 @@
 //! Run with: cargo test --test vessel_integration -- --ignored
 
 use tao_flow::vessel::TmuxVessel;
-use tao_flow::watershed::source::{ChatMessage, ChatRole, LlmSource};
+use tao_flow::water::Role;
+use tao_flow::watershed::source::{ChatMessage, LlmSource};
 use tao_flow::watershed::TmuxPaneSource;
 
 fn echo_vessel(session: &str, window: &str) -> TmuxVessel {
@@ -173,7 +174,7 @@ async fn tmux_pane_source_flows_as_llm_source() {
     let source = TmuxPaneSource::new(vessel);
 
     let messages = vec![ChatMessage {
-        role: ChatRole::User,
+        role: Role::User,
         content: "water finds its path".into(),
     }];
 
@@ -200,15 +201,15 @@ async fn tmux_pane_source_sends_only_last_user_message() {
 
     let messages = vec![
         ChatMessage {
-            role: ChatRole::User,
+            role: Role::User,
             content: "first question".into(),
         },
         ChatMessage {
-            role: ChatRole::Assistant,
+            role: Role::Assistant,
             content: "first answer".into(),
         },
         ChatMessage {
-            role: ChatRole::User,
+            role: Role::User,
             content: "second question".into(),
         },
     ];

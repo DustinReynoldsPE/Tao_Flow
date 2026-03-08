@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 
 use crate::error::FlowError;
-use crate::water::{Rain, Stream};
-use crate::watershed::source::{ChatMessage, ChatRole, LlmSource};
+use crate::water::{Rain, Role, Stream};
+use crate::watershed::source::{ChatMessage, LlmSource};
 use crate::watershed::spring::{Spring, SpringConfig};
 
 const SYSTEM_PROMPT: &str = "\
@@ -57,17 +57,14 @@ impl Spring for MountainSpring {
             .conversation_history
             .iter()
             .map(|m| ChatMessage {
-                role: match m.role {
-                    crate::water::Role::User => ChatRole::User,
-                    crate::water::Role::Assistant => ChatRole::Assistant,
-                },
+                role: m.role,
                 content: m.content.clone(),
             })
             .collect();
 
         // Add the current rain as the latest user message
         messages.push(ChatMessage {
-            role: ChatRole::User,
+            role: Role::User,
             content: rain.raw_input.clone(),
         });
 
