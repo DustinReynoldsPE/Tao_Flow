@@ -135,8 +135,10 @@ src/
       forest.rs                 # Creativity, narrative, empathy
 
   confluence/                   # Where streams merge
-    eddy.rs                     # Eddy, EddyNature, Position types
-    pool.rs                     # ConfluencePool -- LLM-backed weaving
+    eddy.rs                     # Eddy, EddyNature, Position, Resolution types
+    detection.rs                # EddyDetector -- finds divergence between streams
+    yielding.rs                 # YieldingProtocol -- resolves eddies through yielding
+    pool.rs                     # ConfluencePool -- detect, yield, weave
 
   vessel/                       # tmux session management (not yet connected)
     tmux.rs                     # TmuxVessel -- persistent spring sessions
@@ -340,8 +342,8 @@ Mountain and Desert implement the Spring trait. `ClaudeCliSource` uses `claude -
 **Phase 3: The Confluence** *(complete)*
 Forest Spring joins mountain and desert -- three streams now flow. The Confluence Pool weaves multiple perspectives into one river through an LLM integrator. Single streams pass through untouched (wu wei). `simple_merge` is dropped. The `/reflecting-pool` skill emerges -- the system learns to look inward.
 
-**Phase 4: Yielding**
-When three streams merge, they will sometimes disagree. Implement eddy detection -- the confluence analyzes streams for divergence and classifies each eddy (Factual, Interpretive, Stylistic, Structural). The yielding protocol asks each position to find truth in the other. Resolution through yielding, not voting. Property-based tests verify that yielding always produces resolution.
+**Phase 4: Yielding** *(complete)*
+When three streams merge, they sometimes disagree. `EddyDetector` analyzes streams for divergence and classifies each eddy (Factual, Interpretive, Stylistic, Structural). `YieldingProtocol` asks each position to find truth in the other -- resolution through yielding, not voting. `ConfluencePool` orchestrates: detect, yield, weave. Clarity now varies with turbulence -- resolved eddies cost less clarity than unresolved ones. Graceful degradation at every step: if detection or yielding fails, the system falls back to clean weaving.
 
 **Phase 5: The Still Lake**
 The final refinement pass. The lake reads `River::clarity` to know how much settling is needed -- high clarity means gentle polish, low clarity (many tributaries, unresolved eddies) means deeper settling. The lake asks the five questions (clarity, wholeness, kindness, truth, simplicity) and produces an Ocean. The flow is now complete: Rain → Watershed → Confluence → Still Lake → Ocean.
