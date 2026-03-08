@@ -128,6 +128,7 @@ src/
       mod.rs                    # LlmSource trait + mock sources
       claude_cli.rs             # claude -p invocations (stateless)
       llama.rs                  # llama.cpp OpenAI-compatible API
+      tmux_pane.rs              # Persistent vessel-backed source (TmuxPaneSource)
     springs/                    # Individual springs
       mountain.rs               # Deep reasoning
       desert.rs                 # Speed, directness
@@ -305,7 +306,7 @@ These arrive when `proptest` carries water (currently not in dependencies).
 
 ### Testing the Creations
 
-Phase 6. Each creation type (book, podcast, software) will need its own tests. The system that creates software must create tested software -- tests creating tests, the recursive riverbank.
+Creation is what happens when Storm volume triggers recursive flow -- not a separate module. Testing creation means testing the recursive path: decomposition produces independent sub-questions, sub-flows complete concurrently, higher confluence assembles, the still lake settles the whole. The existing Level 2 and future Level 3 tests cover this path.
 
 ---
 
@@ -364,6 +365,20 @@ The single-pass flow was complete and whole. Phase 6 deepened it. A Storm-level 
 
 **What was not built.** Yielding memory (springs remembering past yieldings across cycles), human pause points (boundaries between recursive cycles where the user can guide). These may emerge through use. The numbered phases end here -- the system grows organically from this point.
 
+### What Grows Next
+
+The numbered phases are complete. What follows is not Phase 7 -- it is organic growth, shaped by use.
+
+**Wire springs through the vessel.** The plumbing exists: `TmuxPaneSource` implements `LlmSource`, sentinel detection works, integration tests pass. What remains is connecting real springs -- Mountain in an Opus pane, Desert in a Haiku pane, Forest in a Sonnet pane -- and determining claude's interactive prompt sentinel. When this connection is made, the system becomes observable by default.
+
+**Level 3 end-to-end tests.** Real tmux, real LLM providers, the full journey from Rain to Ocean verified. Slow, require credentials, run manually or in a dedicated CI job.
+
+**What may emerge through use.** Two capabilities were anticipated but not built, because the system has not yet met real use:
+- *Yielding memory* -- springs remembering past yieldings, so the mountain that has yielded to the forest responds differently next time (Phase 4's insight). The risk is over-integration: if springs converge, the productive tension that creates eddies disappears.
+- *Human pause points* -- boundaries in recursive flows where the user can guide direction (Phase 3's insight). The shape will emerge from the experience of watching recursive flows in the vessel.
+
+These are not planned. They are anticipated. A plan commits; an anticipation listens.
+
 ---
 
 ## The Vessel: Observable Flow
@@ -403,26 +418,30 @@ trait LlmSource: Send + Sync
 
 ClaudeCliSource  -- stateless, spawns claude -p each time
 LlamaSource      -- stateless, HTTP POST each time
-TmuxPaneSource   -- persistent, sends to tmux pane, polls for response
+TmuxPaneSource   -- persistent, sends to tmux pane, waits for sentinel
 ```
 
-Stateless sources remain for testing and environments without tmux. The vessel is the default for real use.
+Stateless sources remain for testing and environments without tmux. The vessel is the natural home for real use -- when springs are wired through it, the system becomes observable.
 
 ### Session lifecycle
 
 The `Vessel` manages the tmux session:
 
 ```
+create(name):
+    create session if not running
+    configure with_command (the process each pane starts)
+    configure with_sentinel (the signal that means "ready")
+
 prepare(springs):
-    create session "tao-flow" if not running
     for each spring:
-        create pane, start its process (claude --model X or llama server)
+        create pane, start its configured process
     return pane_id map (spring_name → tmux target)
 
 send(pane_target, input):
     send keys to pane
-    poll capture-pane for stable output
-    extract response from output
+    wait for sentinel in captured output
+    extract response from full scrollback
 
 teardown():
     kill session (or leave running for the user to inspect)
@@ -440,14 +459,14 @@ The system has unit tests at every joint. What it lacks is end-to-end verificati
 
 **Level 1: Unit tests (existing).** MockSource replaces real LLMs. Fast, deterministic. Tests the flow structure, the type transitions, the graceful degradation. These are the bedrock and remain unchanged.
 
-**Level 2: Vessel integration tests (next).** Verify the tmux plumbing works without real LLMs. Use a simple echo process (e.g., `cat` or a shell script that echoes input) in each pane. Verify:
-- Session creation and pane splitting
-- Sending input and capturing output
+**Level 2: Vessel integration tests (existing).** Verify the tmux plumbing works without real LLMs. Echo processes in panes confirm:
+- Session creation, pane splitting, and configurable processes
+- Sending input and capturing output via sentinel detection
 - Concurrent sends to multiple panes
-- Session cleanup
-- Graceful handling of tmux not being installed
+- Session teardown and cleanup
+- Full scrollback capture
 
-These tests require tmux but not Claude or llama.cpp. They can run in CI.
+These tests require tmux but not Claude or llama.cpp. They run in CI.
 
 **Level 3: Full end-to-end tests.** Real tmux + real LLM providers. Mark as `#[ignore]` by default -- they are slow, require credentials, and cost money (or Claude Max subscription). Run manually or in a dedicated CI job.
 
