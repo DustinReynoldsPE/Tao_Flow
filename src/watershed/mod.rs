@@ -5,7 +5,7 @@ pub mod volume_sensor;
 
 pub use source::{ChatMessage, ChatRole, LlmSource};
 pub use spring::Spring;
-pub use springs::{DesertSpring, MountainSpring};
+pub use springs::{DesertSpring, ForestSpring, MountainSpring};
 pub use volume_sensor::VolumeSensor;
 
 use crate::water::rain::Volume;
