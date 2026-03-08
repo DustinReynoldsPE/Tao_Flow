@@ -222,13 +222,11 @@ merge(streams, rain_input):
 
 The confluence holds its own LLM source. When multiple streams arrive, it builds a prompt containing all perspectives and asks the integrator to weave them into one voice. The result should read as a single coherent response, not a committee. It does not mention sources by name.
 
-Eddy detection arrives with Phase 4 (Yielding). For now, the confluence weaves and records which springs contributed.
+When multiple streams arrive, the confluence detects eddies, resolves them through yielding, then weaves the result. It records which springs contributed as tributaries.
 
 ### The Still Lake
 
-Phase 5. The module exists as a placeholder -- the shape of the vessel, waiting for water.
-
-When it arrives, the lake will read `River::clarity` to know how much settling is needed. High clarity means gentle polish. Low clarity (many tributaries, unresolved eddies) means deeper settling. The lake asks the five questions -- clarity, wholeness, kindness, truth, simplicity -- and produces an Ocean.
+The lake reads `River::clarity` to know how much settling is needed. High clarity means gentle polish. Low clarity (many tributaries, unresolved eddies) means deeper settling. Three settling depths (Gentle, Moderate, Deep) respond proportionally. The lake engages only with unresolved eddies -- resolved ones already found truth through yielding. It asks the five questions -- clarity, wholeness, kindness, truth, simplicity -- and produces an Ocean. Wu wei: clear water (clarity 1.0) passes through untouched.
 
 ---
 
@@ -249,7 +247,7 @@ flow(user_input):
 
 The water cycle: after each flow, the user's input and the system's response are pushed into vapor as conversation history. The next rain carries this vapor, so springs see the full conversation. Context accumulates naturally.
 
-The Still Lake is not yet in the flow -- river becomes ocean directly. When Phase 5 arrives, the lake will sit between confluence and ocean, reading river clarity to know how much polishing is needed.
+The Still Lake sits between confluence and ocean, reading river clarity to know how much polishing is needed. Graceful degradation: if settling fails, the river content reaches the ocean unchanged.
 
 ---
 
@@ -430,13 +428,13 @@ teardown():
     kill session (or leave running for the user to inspect)
 ```
 
-`TaoFlow::with_vessel()` connects the vessel to springs. Each spring receives a `TmuxPaneSource` backed by its pane. The builder wires the plumbing; the flow does not change.
+Each spring receives a `TmuxPaneSource` backed by its pane. Because `TmuxPaneSource` implements `LlmSource`, the flow does not change -- the vessel connects through the trait, not through special plumbing.
 
 ---
 
 ## End-to-End Testing
 
-The system has unit tests at every joint (114 passing). What it lacks is end-to-end verification: does rain actually become ocean when real LLMs respond?
+The system has unit tests at every joint. What it lacks is end-to-end verification: does rain actually become ocean when real LLMs respond?
 
 ### Testing levels
 

@@ -1,6 +1,6 @@
 use crate::error::FlowError;
-use crate::water::{Ocean, River};
-use crate::watershed::source::{ChatMessage, ChatRole, LlmSource};
+use crate::water::{Ocean, River, Role};
+use crate::watershed::source::{ChatMessage, LlmSource};
 
 /// How deeply the lake engages, calibrated by clarity.
 enum SettlingDepth {
@@ -40,7 +40,7 @@ impl StillLake {
         let prompt = Self::build_prompt(&river, rain_input, &depth);
 
         let messages = vec![ChatMessage {
-            role: ChatRole::User,
+            role: Role::User,
             content: prompt,
         }];
 

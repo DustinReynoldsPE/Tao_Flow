@@ -1,8 +1,9 @@
 use async_trait::async_trait;
 use tokio::process::Command;
 
-use super::{ChatMessage, ChatRole, LlmSource};
+use super::{ChatMessage, LlmSource};
 use crate::error::FlowError;
+use crate::water::Role;
 
 /// Uses `claude -p` (print mode). No API keys needed.
 pub struct ClaudeCliSource {
@@ -37,8 +38,8 @@ impl ClaudeCliSource {
             parts.push("Prior conversation:".to_string());
             for msg in &messages[..messages.len() - 1] {
                 let role = match msg.role {
-                    ChatRole::User => "User",
-                    ChatRole::Assistant => "Assistant",
+                    Role::User => "User",
+                    Role::Assistant => "Assistant",
                 };
                 parts.push(format!("{role}: {}", msg.content));
             }
@@ -125,7 +126,7 @@ mod tests {
     #[test]
     fn format_simple_prompt() {
         let messages = vec![ChatMessage {
-            role: ChatRole::User,
+            role: Role::User,
             content: "What is the Tao?".into(),
         }];
         let formatted = ClaudeCliSource::format_conversation("You are wise.", &messages);
@@ -136,15 +137,15 @@ mod tests {
     fn format_conversation_with_history() {
         let messages = vec![
             ChatMessage {
-                role: ChatRole::User,
+                role: Role::User,
                 content: "My name is River.".into(),
             },
             ChatMessage {
-                role: ChatRole::Assistant,
+                role: Role::Assistant,
                 content: "Hello, River.".into(),
             },
             ChatMessage {
-                role: ChatRole::User,
+                role: Role::User,
                 content: "What is my name?".into(),
             },
         ];

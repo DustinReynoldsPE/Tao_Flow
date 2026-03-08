@@ -17,11 +17,8 @@ pub enum FlowError {
     #[error("Decomposition failed: {0}")]
     DecompositionFailure(String),
 
-    #[error("Source error: {0}")]
-    SourceError(#[from] reqwest::Error),
-
-    #[error("Configuration error: {0}")]
-    ConfigError(String),
+    #[error("Vessel error: {0}")]
+    VesselError(String),
 }
 
 #[cfg(test)]

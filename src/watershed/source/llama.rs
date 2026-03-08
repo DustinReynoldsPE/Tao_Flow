@@ -2,8 +2,9 @@ use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
-use super::{ChatMessage, ChatRole, LlmSource};
+use super::{ChatMessage, LlmSource};
 use crate::error::FlowError;
+use crate::water::Role;
 
 /// llama.cpp server via its OpenAI-compatible API.
 pub struct LlamaSource {
@@ -60,8 +61,8 @@ fn to_api_messages(system: &str, messages: &[ChatMessage]) -> Vec<ApiMessage> {
     for msg in messages {
         out.push(ApiMessage {
             role: match msg.role {
-                ChatRole::User => "user".into(),
-                ChatRole::Assistant => "assistant".into(),
+                Role::User => "user".into(),
+                Role::Assistant => "assistant".into(),
             },
             content: msg.content.clone(),
         });
@@ -129,7 +130,7 @@ mod tests {
     #[test]
     fn api_messages_include_system() {
         let msgs = vec![ChatMessage {
-            role: ChatRole::User,
+            role: Role::User,
             content: "hello".into(),
         }];
         let api = to_api_messages("you are wise", &msgs);
@@ -141,7 +142,7 @@ mod tests {
     #[test]
     fn api_messages_skip_empty_system() {
         let msgs = vec![ChatMessage {
-            role: ChatRole::User,
+            role: Role::User,
             content: "hello".into(),
         }];
         let api = to_api_messages("", &msgs);

@@ -5,7 +5,8 @@ pub mod springs;
 pub mod volume_sensor;
 
 pub use mineral_classifier::MineralClassifier;
-pub use source::{ChatMessage, ChatRole, LlmSource};
+pub use source::tmux_pane::TmuxPaneSource;
+pub use source::{ChatMessage, LlmSource};
 pub use spring::Spring;
 pub use springs::{DesertSpring, ForestSpring, MountainSpring};
 pub use volume_sensor::VolumeSensor;
