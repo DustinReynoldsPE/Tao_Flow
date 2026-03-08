@@ -32,11 +32,20 @@ impl River {
     pub fn has_eddies(&self) -> bool {
         !self.eddies.is_empty()
     }
+
+    pub fn resolved_eddies(&self) -> usize {
+        self.eddies.iter().filter(|e| e.is_resolved()).count()
+    }
+
+    pub fn unresolved_eddies(&self) -> usize {
+        self.eddies.iter().filter(|e| !e.is_resolved()).count()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::confluence::{EddyNature, Position};
 
     #[test]
     fn river_from_single_stream() {
@@ -51,5 +60,50 @@ mod tests {
     fn empty_river_has_no_water() {
         let river = River::from_single("desert".into(), String::new());
         assert!(!river.has_water());
+    }
+
+    #[test]
+    fn river_tracks_eddy_resolution() {
+        let mut resolved = Eddy::new(
+            "approach",
+            EddyNature::Interpretive,
+            vec![
+                Position {
+                    source: "mountain".into(),
+                    view: "theory".into(),
+                },
+                Position {
+                    source: "forest".into(),
+                    view: "stories".into(),
+                },
+            ],
+        );
+        resolved.resolve("Both are needed.");
+
+        let unresolved = Eddy::new(
+            "timeline",
+            EddyNature::Factual,
+            vec![
+                Position {
+                    source: "mountain".into(),
+                    view: "1971".into(),
+                },
+                Position {
+                    source: "desert".into(),
+                    view: "1972".into(),
+                },
+            ],
+        );
+
+        let river = River {
+            content: "Merged.".into(),
+            tributaries: vec!["mountain".into(), "desert".into(), "forest".into()],
+            eddies: vec![resolved, unresolved],
+            clarity: 0.65,
+        };
+
+        assert!(river.has_eddies());
+        assert_eq!(river.resolved_eddies(), 1);
+        assert_eq!(river.unresolved_eddies(), 1);
     }
 }

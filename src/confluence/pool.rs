@@ -1,3 +1,6 @@
+use crate::confluence::detection::EddyDetector;
+use crate::confluence::yielding::YieldingProtocol;
+use crate::confluence::Eddy;
 use crate::error::FlowError;
 use crate::water::{River, Stream};
 use crate::watershed::source::{ChatMessage, ChatRole, LlmSource};
@@ -5,7 +8,8 @@ use crate::watershed::source::{ChatMessage, ChatRole, LlmSource};
 /// Where streams merge into a river.
 ///
 /// When one stream flows alone, the pool does nothing — wu wei.
-/// When multiple streams arrive, the pool weaves them together.
+/// When multiple streams arrive, the pool detects eddies,
+/// resolves them through yielding, then weaves the river.
 pub struct ConfluencePool {
     source: Box<dyn LlmSource>,
 }
@@ -27,11 +31,32 @@ impl ConfluencePool {
                 let stream = streams.into_iter().next().unwrap();
                 Ok(River::from_single(stream.source, stream.content))
             }
-            _ => self.weave(streams, rain_input).await,
+            _ => self.detect_yield_weave(streams, rain_input).await,
         }
     }
 
-    async fn weave(&self, streams: Vec<Stream>, rain_input: &str) -> Result<River, FlowError> {
+    async fn detect_yield_weave(
+        &self,
+        streams: Vec<Stream>,
+        rain_input: &str,
+    ) -> Result<River, FlowError> {
+        let detector = EddyDetector::new(self.source.as_ref());
+        let mut eddies = detector.detect(&streams, rain_input).await;
+
+        if !eddies.is_empty() {
+            let protocol = YieldingProtocol::new(self.source.as_ref());
+            protocol.yield_all(&mut eddies).await;
+        }
+
+        self.weave(streams, rain_input, eddies).await
+    }
+
+    async fn weave(
+        &self,
+        streams: Vec<Stream>,
+        rain_input: &str,
+        eddies: Vec<Eddy>,
+    ) -> Result<River, FlowError> {
         let tributaries: Vec<String> = streams.iter().map(|s| s.source.clone()).collect();
 
         let mut prompt = format!(
@@ -53,6 +78,19 @@ impl ConfluencePool {
             ));
         }
 
+        if eddies.iter().any(|e| e.is_resolved()) {
+            prompt.push_str("Points of divergence have been resolved through yielding:\n\n");
+            for eddy in &eddies {
+                if let Some(ref resolution) = eddy.resolution {
+                    prompt.push_str(&format!(
+                        "- On \"{}\": {}\n",
+                        eddy.topic, resolution.synthesis
+                    ));
+                }
+            }
+            prompt.push_str("\nHonor these resolutions in the weave.\n\n");
+        }
+
         let messages = vec![ChatMessage {
             role: ChatRole::User,
             content: prompt,
@@ -64,12 +102,33 @@ impl ConfluencePool {
             .await
             .map_err(|e| FlowError::ConfluenceFailure(e.to_string()))?;
 
+        let clarity = Self::assess_clarity(&eddies);
+
         Ok(River {
             content,
             tributaries,
-            eddies: Vec::new(),
-            clarity: 0.8,
+            eddies,
+            clarity,
         })
+    }
+
+    fn assess_clarity(eddies: &[Eddy]) -> f32 {
+        if eddies.is_empty() {
+            return 0.8;
+        }
+
+        let base = 0.8_f32;
+        let mut penalty = 0.0_f32;
+
+        for eddy in eddies {
+            if eddy.is_resolved() {
+                penalty += 0.05;
+            } else {
+                penalty += 0.1;
+            }
+        }
+
+        (base - penalty).max(0.3)
     }
 }
 
@@ -110,6 +169,8 @@ mod tests {
 
     #[tokio::test]
     async fn multiple_streams_are_woven() {
+        // MockSource returns the same response for all calls (detection, yielding, weaving).
+        // Detection returns "NONE" format won't match, so no eddies detected — clean merge.
         let woven = "The Tao is both deep and immediate.";
         let source = MockSource::new(woven);
         let pool = ConfluencePool::new(Box::new(source));
@@ -125,6 +186,8 @@ mod tests {
         assert_eq!(river.tributary_count(), 3);
         assert_eq!(river.content, woven);
         assert!(river.has_water());
+        assert!(!river.has_eddies());
+        assert_eq!(river.clarity, 0.8);
     }
 
     #[tokio::test]
@@ -160,5 +223,73 @@ mod tests {
         assert!(river.tributaries.contains(&"mountain".to_string()));
         assert!(river.tributaries.contains(&"forest".to_string()));
         assert!(river.tributaries.contains(&"desert".to_string()));
+    }
+
+    #[tokio::test]
+    async fn clarity_reflects_resolved_eddies() {
+        let eddies = vec![{
+            let mut e = Eddy::new(
+                "topic",
+                crate::confluence::EddyNature::Interpretive,
+                vec![
+                    crate::confluence::Position {
+                        source: "mountain".into(),
+                        view: "A".into(),
+                    },
+                    crate::confluence::Position {
+                        source: "desert".into(),
+                        view: "B".into(),
+                    },
+                ],
+            );
+            e.resolve("Both carry truth.");
+            e
+        }];
+        let clarity = ConfluencePool::assess_clarity(&eddies);
+        assert!((clarity - 0.75).abs() < 0.01);
+    }
+
+    #[tokio::test]
+    async fn clarity_reflects_unresolved_eddies() {
+        let eddies = vec![Eddy::new(
+            "topic",
+            crate::confluence::EddyNature::Factual,
+            vec![
+                crate::confluence::Position {
+                    source: "mountain".into(),
+                    view: "A".into(),
+                },
+                crate::confluence::Position {
+                    source: "desert".into(),
+                    view: "B".into(),
+                },
+            ],
+        )];
+        let clarity = ConfluencePool::assess_clarity(&eddies);
+        assert!((clarity - 0.7).abs() < 0.01);
+    }
+
+    #[tokio::test]
+    async fn clarity_has_floor() {
+        let eddies: Vec<Eddy> = (0..10)
+            .map(|i| {
+                Eddy::new(
+                    format!("topic {}", i),
+                    crate::confluence::EddyNature::Structural,
+                    vec![
+                        crate::confluence::Position {
+                            source: "mountain".into(),
+                            view: "A".into(),
+                        },
+                        crate::confluence::Position {
+                            source: "desert".into(),
+                            view: "B".into(),
+                        },
+                    ],
+                )
+            })
+            .collect();
+        let clarity = ConfluencePool::assess_clarity(&eddies);
+        assert!((clarity - 0.3).abs() < 0.01);
     }
 }
