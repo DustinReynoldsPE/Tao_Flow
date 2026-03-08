@@ -8,6 +8,7 @@ pub mod vessel;
 pub mod water;
 pub mod watershed;
 
+pub use confluence::ConfluencePool;
 pub use error::FlowError;
 pub use flow::TaoFlow;
 pub use water::{Ocean, Rain, River, Stream, Vapor};

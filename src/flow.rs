@@ -1,16 +1,19 @@
+use crate::confluence::ConfluencePool;
 use crate::error::FlowError;
-use crate::water::{Message, Ocean, Rain, River, Role, Stream, Vapor};
+use crate::water::{Message, Ocean, Rain, Role, Vapor};
 use crate::watershed::Watershed;
 
 pub struct TaoFlow {
     watershed: Watershed,
+    confluence: ConfluencePool,
     vapor: Vapor,
 }
 
 impl TaoFlow {
-    pub fn new(watershed: Watershed) -> Self {
+    pub fn new(watershed: Watershed, confluence: ConfluencePool) -> Self {
         Self {
             watershed,
+            confluence,
             vapor: Vapor::default(),
         }
     }
@@ -23,36 +26,11 @@ impl TaoFlow {
             return Err(FlowError::Drought);
         }
 
-        let river = Self::simple_merge(streams);
+        let river = self.confluence.merge(streams, &rain.raw_input).await?;
         let ocean = Ocean::new(river.content);
         self.update_vapor(&rain, &ocean);
 
         Ok(ocean.content)
-    }
-
-    /// Pick the deepest stream. Full confluence comes later.
-    fn simple_merge(streams: Vec<Stream>) -> River {
-        debug_assert!(!streams.is_empty());
-
-        if streams.len() == 1 {
-            let stream = streams.into_iter().next().unwrap();
-            return River::from_single(stream.source, stream.content);
-        }
-
-        // Select the deepest stream
-        let best = streams
-            .iter()
-            .max_by(|a, b| a.depth.partial_cmp(&b.depth).unwrap())
-            .unwrap();
-
-        let tributaries: Vec<String> = streams.iter().map(|s| s.source.clone()).collect();
-
-        River {
-            content: best.content.clone(),
-            tributaries,
-            eddies: Vec::new(),
-            clarity: best.clarity,
-        }
     }
 
     fn update_vapor(&mut self, rain: &Rain, ocean: &Ocean) {
@@ -76,7 +54,7 @@ mod tests {
     use super::*;
     use crate::watershed::source::mock::{DrySource, MockSource};
     use crate::watershed::spring::SpringConfig;
-    use crate::watershed::{DesertSpring, MountainSpring};
+    use crate::watershed::{DesertSpring, ForestSpring, MountainSpring};
     use std::collections::HashMap;
 
     fn mountain_spring(response: &str) -> Box<dyn crate::watershed::Spring> {
@@ -107,13 +85,33 @@ mod tests {
         ))
     }
 
+    fn forest_spring(response: &str) -> Box<dyn crate::watershed::Spring> {
+        let mut affinities = HashMap::new();
+        affinities.insert("narrative".into(), 0.9);
+        affinities.insert("empathy".into(), 0.8);
+        let config = SpringConfig {
+            name: "forest".into(),
+            nature: "creativity, narrative, empathy".into(),
+            affinities,
+        };
+        Box::new(ForestSpring::new(
+            config,
+            Box::new(MockSource::new(response)),
+        ))
+    }
+
+    fn test_confluence(response: &str) -> ConfluencePool {
+        ConfluencePool::new(Box::new(MockSource::new(response)))
+    }
+
     #[tokio::test]
     async fn rain_flows_to_ocean() {
         let watershed = Watershed::new(vec![
             mountain_spring("The Tao is the way."),
             desert_spring("It's the way."),
         ]);
-        let mut tao = TaoFlow::new(watershed);
+        let confluence = test_confluence("The Tao is the way.");
+        let mut tao = TaoFlow::new(watershed, confluence);
         let result = tao.flow("What is the Tao?").await.unwrap();
         assert!(!result.is_empty());
     }
@@ -124,27 +122,37 @@ mod tests {
             mountain_spring("Should not appear."),
             desert_spring("Hello!"),
         ]);
-        let mut tao = TaoFlow::new(watershed);
+        // Single stream passes through without calling the confluence source
+        let confluence = test_confluence("unused");
+        let mut tao = TaoFlow::new(watershed, confluence);
         let result = tao.flow("hi").await.unwrap();
         assert_eq!(result, "Hello!");
     }
 
     #[tokio::test]
-    async fn simple_merge_picks_deepest() {
-        // Create two streams with different depths
-        let short = Stream::new("desert", "Yes.");
-        let long = Stream::new("mountain", "word ".repeat(100));
+    async fn three_springs_merge_to_river() {
+        let watershed = Watershed::new(vec![
+            mountain_spring("Deep analysis of the question."),
+            desert_spring("Quick, direct answer."),
+            forest_spring("A story about the answer."),
+        ]);
+        let confluence = test_confluence("A woven response from three perspectives.");
+        let mut tao = TaoFlow::new(watershed, confluence);
 
-        let river = TaoFlow::simple_merge(vec![short, long]);
-        assert_eq!(river.tributary_count(), 2);
-        // The longer response has more depth
-        assert!(river.content.contains("word"));
+        // Downpour activates all springs
+        let result = tao
+            .flow("Explain the nature of water in philosophy and storytelling and practice")
+            .await
+            .unwrap();
+
+        assert_eq!(result, "A woven response from three perspectives.");
     }
 
     #[tokio::test]
     async fn vapor_accumulates_across_flows() {
         let watershed = Watershed::new(vec![desert_spring("Response.")]);
-        let mut tao = TaoFlow::new(watershed);
+        let confluence = test_confluence("unused");
+        let mut tao = TaoFlow::new(watershed, confluence);
 
         tao.flow("First").await.unwrap();
         tao.flow("Second").await.unwrap();
@@ -164,17 +172,9 @@ mod tests {
             },
             Box::new(DrySource),
         )) as Box<dyn crate::watershed::Spring>]);
-        let mut tao = TaoFlow::new(watershed);
+        let confluence = test_confluence("unused");
+        let mut tao = TaoFlow::new(watershed, confluence);
         let result = tao.flow("hello").await;
         assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn single_stream_passes_through() {
-        let stream = Stream::new("mountain", "Only voice.");
-        let river = TaoFlow::simple_merge(vec![stream]);
-        assert_eq!(river.tributary_count(), 1);
-        assert_eq!(river.content, "Only voice.");
-        assert!(!river.has_eddies());
     }
 }
