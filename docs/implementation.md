@@ -106,28 +106,27 @@ Serde is water for data -- it flows JSON, YAML, MessagePack, anything. Configura
 
 ## Project Structure
 
-Files that exist today. Future phases will add to this naturally.
-
 ```
 src/
   main.rs                       # Entry point
   lib.rs                        # Library root -- re-exports
-  flow.rs                       # TaoFlow -- Rain to Ocean
+  flow.rs                       # TaoFlow -- Rain to Ocean (single-pass and recursive)
   error.rs                      # FlowError
 
   water/                        # The water types (compiler-enforced lifecycle)
     vapor.rs                    # Context carried between flows
     rain.rs                     # User input + volume + minerals
-    stream.rs                   # Individual spring response
+    stream.rs                   # Individual spring response (source + content)
     river.rs                    # Merged output from confluence
     ocean.rs                    # What the user receives
 
   watershed/                    # Where rain meets springs
     spring.rs                   # Spring trait + SpringConfig
     volume_sensor.rs            # Classifies rain volume by word count
+    mineral_classifier.rs       # Keyword-based mineral extraction for spring affinity
     source/                     # The underground aquifer
       mod.rs                    # LlmSource trait + mock sources
-      claude_cli.rs             # claude -p invocations
+      claude_cli.rs             # claude -p invocations (stateless)
       llama.rs                  # llama.cpp OpenAI-compatible API
     springs/                    # Individual springs
       mountain.rs               # Deep reasoning
@@ -135,17 +134,16 @@ src/
       forest.rs                 # Creativity, narrative, empathy
 
   confluence/                   # Where streams merge
+    decomposition.rs            # Decomposer -- breaks Storm-level rain into sub-questions
     eddy.rs                     # Eddy, EddyNature, Position, Resolution types
     detection.rs                # EddyDetector -- finds divergence between streams
     yielding.rs                 # YieldingProtocol -- resolves eddies through yielding
     pool.rs                     # ConfluencePool -- detect, yield, weave
 
-  vessel/                       # tmux session management (not yet connected)
-    tmux.rs                     # TmuxVessel -- persistent spring sessions
+  vessel/                       # The observable space where springs flow
+    tmux.rs                     # TmuxVessel -- persistent spring sessions in tmux panes
 
-  still_lake/                   # Phase 5 placeholder
-  creation/                     # Phase 6 placeholder
-  config/                       # Config loading (inline for now)
+  still_lake/                   # Final refinement (the five questions)
 ```
 
 ---
@@ -165,7 +163,7 @@ Vapor → Rain → Stream(s) → River → Ocean
 - **Vapor** -- context carried between flows. Conversation history accumulates naturally.
 - **Rain** -- user input with its vapor, a volume classification, and mineral tags for spring affinity.
 - **Volume** -- how many springs should respond: Droplet (one), Shower (two), Downpour/Storm (all).
-- **Stream** -- a single spring's response, carrying its source name, content, clarity, and depth.
+- **Stream** -- a single spring's response, carrying its source name and content.
 - **Eddy** -- a point of divergence between streams. Has a topic, the positions taken, and a nature (Factual, Interpretive, Stylistic, Structural).
 - **River** -- merged output from the confluence. Carries content, which tributaries contributed, any eddies detected, and a clarity score.
 - **Ocean** -- what the user receives. Content only. By the time water reaches the ocean, it should be clear.
@@ -176,9 +174,9 @@ In nature, a mountain spring produces clear water. When streams merge at conflue
 
 River clarity carries this signal. A single stream passes through at 1.0 (crystal clear). A clean multi-stream merge is 0.8 (slightly muddied by weaving). Eddies will lower it further. The Still Lake (Phase 5) will read clarity to know how much polishing the water needs. Ocean has no clarity field -- by the time water arrives, the lake has settled it.
 
-#### Minerals: Infrastructure Awaiting Its Caller
+#### Minerals: Routing Water to the Right Springs
 
-Springs declare affinities (what they resonate with). Rain carries minerals (tags). When minerals match affinities, a spring's relevance rises above the base score. The infrastructure is built and tested, but no production code yet populates minerals. A mineral classifier will give this system its water.
+Springs declare affinities (what they resonate with). Rain carries minerals (tags). When minerals match affinities, a spring's relevance rises above the base score. `MineralClassifier` (keyword-based) populates minerals when rain enters the watershed. For Shower volume, the two most relevant springs are selected by affinity matching. For Downpour/Storm, all springs respond regardless.
 
 ### The Spring
 
@@ -352,34 +350,126 @@ The lake engages only with unresolved eddies. Resolved eddies already found thei
 
 Wu wei: clear water (clarity 1.0) passes through untouched. Graceful degradation: if settling fails, the river content reaches the ocean unchanged. The water always reaches the ocean.
 
-**Phase 6: The Return**
+**Phase 6: The Return** *(complete)*
 *"Return is the movement of the Tao."* -- Chapter 40
 
-The single-pass flow is complete and whole. Phase 6 does not complete a broken system -- it deepens a complete one. A Storm-level request cannot be answered in one pass. Phase 6 makes the flow recursive:
+The single-pass flow was complete and whole. Phase 6 deepened it. A Storm-level request cannot be answered in one pass. Phase 6 made the flow recursive:
 
-1. **Decomposition** -- a River that is too wide and shallow is broken into parts. Each part becomes new Rain, carrying the context of the whole.
-2. **Recursive flow** -- each part flows through the full single-pass journey independently: watershed, confluence, still lake. The same flow, operating at a finer grain.
-3. **Higher confluence** -- the sub-rivers merge at a higher level. The same ConfluencePool weaves them, but now it weaves refined parts rather than raw streams.
-4. **Termination** -- the Still Lake's settling depth is the signal. When the lake settles at Gentle depth, one cycle is enough -- the water is nearly clear. When it settles at Deep depth, the river may benefit from another cycle. Wu wei holds here too: if a sub-flow produces clear water, it does not cycle further.
+1. **Decomposition** -- `Decomposer` breaks Storm-level rain into 2-5 independent sub-questions via LLM. Parses "Q:" prefix format with numbered-list fallback. Graceful degradation: if decomposition fails, single-pass handles the Storm.
+2. **Recursive flow** -- each sub-question flows through the full single-pass journey independently and concurrently via `futures::join_all`. Sub-questions carry the parent's vapor for context but do not update it.
+3. **Higher confluence** -- sub-oceans become tributaries. The same ConfluencePool weaves them. The same StillLake settles the result. No new types were needed.
+4. **Termination** -- `max_depth` prevents infinite recursion. Natural volume reduction provides the primary guard: sub-questions are shorter than storms, so they classify as Shower or Downpour and single-pass.
 
-**The vessel enters the water.** `TmuxVessel` has waited on shore since Phase 2. Recursive flow gives it meaning. When springs respond multiple times across cycles, persistent tmux sessions carry their conversation naturally -- the vessel holds the spring's memory without explicit context management. Each spring's window is a living record of its journey through the cycles.
+**Minerals found their water.** `MineralClassifier` (keyword-based) populates rain with mineral tags. The affinity system in `SpringConfig::sense_relevance()` now has a production caller: Shower-volume activation selects the two most relevant springs by mineral-affinity matching. Three phases as a dry riverbed, now flowing.
 
-**Yielding memory.** When the water cycle actually cycles, the springs respond multiple times to related sub-problems. Phase 4's reflection revealed: yielding should change the one who yields. Each spring should carry a memory of its yieldings -- loaded into its prompt so lessons persist across cycles. The mountain that yielded to the forest in the first cycle responds differently in the second -- not by becoming the forest, but by being a mountain that knows the forest has something true to say. The risk is over-integration: if springs converge, the productive tension that creates eddies disappears. Springs must remain partial but *aware* of the other partials. Chapter 22: *"If you want to become whole, let yourself be partial."*
+**Dead weight was dropped.** `Stream::clarity` (always 0.8, never read) and `Stream::depth` (calculated, never read) were removed. The `creation/` module dissolved into the recursive flow -- creation is what happens when Storm volume triggers the water cycle to cycle. The `config/` module was empty for six phases; inline configuration is enough.
 
-**Dry things that may find their water.** Minerals have been a dry riverbed since Phase 3 -- rain arrives with empty mineral tags, and the affinity system activates for no caller. Recursive flow may be where minerals earn their place: routing sub-flows through the watershed requires understanding the nature of the rain. Stream-level metrics (clarity, depth) are set but unread -- comparing individual stream quality across cycles might give them meaning. These are possibilities, not promises. If they do not carry water here, they should be dropped.
+**What was not built.** Yielding memory (springs remembering past yieldings across cycles), human pause points (boundaries between recursive cycles where the user can guide). These may emerge through use. The numbered phases end here -- the system grows organically from this point.
 
-**Human guidance is a spectrum.** The system yields to the human's natural level of engagement. The pause points are the boundaries between recursive cycles: after decomposition (show the structure), after each sub-river completes (show progress), after higher confluence (show the assembled whole). The human can engage at any of these or none. Vapor carries the human's presence -- how much they've guided informs how much the system pauses.
+---
 
-The system should create the way it was created. Tao Flow was built through artifacts -- philosophy first, then architecture, then implementation plan, then phases of work. A Storm-level request follows the same pattern.
+## The Vessel: Observable Flow
 
-*(Updated by `/rising-mist` after Phase 5: the vessel now has a named home here. Termination connects to the Still Lake's settling depth. Dry infrastructure -- minerals, stream metrics -- is acknowledged with an honest deadline: carry water here or be dropped.)*
+*"We shape clay into a pot, but it is the emptiness inside that holds whatever we want."*
+*-- Tao Te Ching, Chapter 11*
 
-**Phase 7: Creation**
-Not separate machinery. With recursive flow in place, creation is what happens naturally when Storm volume triggers the water cycle to actually cycle. A book is a Storm with book-shaped riverbeds. Software is a Storm with code-shaped riverbeds. The specialization lives in system prompts, not in separate creation modules. The `creation/` directory may dissolve into the watershed itself.
+The `TmuxVessel` was built in Phase 2 and has waited on shore through four phases. The reflecting pool revealed why: the vessel is not an optional feature for persistent sessions. It is the observation layer -- the emptiness that makes the springs visible.
 
-What Phase 7 actually is: the phase where the system meets real use. New riverbeds (system prompts for specific creation types). New pause-point patterns (where different kinds of creation need human guidance). New skills that emerge as creation patterns solidify. The machinery is the same machinery. The water is the same water. Only the riverbed changes shape.
+When three springs respond to a question, the user sees only the ocean. They do not see the mountain's careful analysis, the desert's quick assessment, the forest's creative warmth. They do not see the eddies detected, the yielding that occurred, the settling that clarified. The water reaches the ocean, but the journey is hidden.
 
-*(Updated by `/rising-mist` after Phase 4: Phase 3's reflection suggested creation might not need separate machinery. Phase 4's yielding and the prospect of recursive flow in Phase 6 confirm this. Phase 7 is the use of the system, not a new system.)*
+The vessel makes the journey visible.
+
+### Architecture
+
+```
+tmux session: tao-flow
+  ┌─────────────┬─────────────┬─────────────┐
+  │  mountain   │   desert    │   forest    │
+  │  (opus)     │   (haiku)   │   (sonnet)  │
+  │             │             │             │
+  │ [prompt]    │ [prompt]    │ [prompt]    │
+  │ [thinking]  │ [thinking]  │ [thinking]  │
+  │ [response]  │ [response]  │ [response]  │
+  └─────────────┴─────────────┴─────────────┘
+```
+
+Each spring gets a pane. The user watches the water flow in real time. `tmux attach -t tao-flow` to observe the system. Each pane shows the full conversation: the system prompt, the user's question arriving, the spring's thinking, the response. The system becomes transparent not by explaining itself, but by being visible.
+
+### How it connects
+
+`TmuxPaneSource` implements `LlmSource` -- the same trait that `ClaudeCliSource` and `LlamaSource` implement. Instead of spawning a one-shot `claude -p` process, it sends to a persistent tmux pane and captures the response. The spring does not know whether it is using a stateless CLI source or a persistent vessel-backed source. The architecture does not change. Only the underground aquifer deepens.
+
+```
+trait LlmSource: Send + Sync
+    complete(system, messages) → Result<String>
+
+ClaudeCliSource  -- stateless, spawns claude -p each time
+LlamaSource      -- stateless, HTTP POST each time
+TmuxPaneSource   -- persistent, sends to tmux pane, polls for response
+```
+
+Stateless sources remain for testing and environments without tmux. The vessel is the default for real use.
+
+### Session lifecycle
+
+The `Vessel` manages the tmux session:
+
+```
+prepare(springs):
+    create session "tao-flow" if not running
+    for each spring:
+        create pane, start its process (claude --model X or llama server)
+    return pane_id map (spring_name → tmux target)
+
+send(pane_target, input):
+    send keys to pane
+    poll capture-pane for stable output
+    extract response from output
+
+teardown():
+    kill session (or leave running for the user to inspect)
+```
+
+`TaoFlow::with_vessel()` connects the vessel to springs. Each spring receives a `TmuxPaneSource` backed by its pane. The builder wires the plumbing; the flow does not change.
+
+---
+
+## End-to-End Testing
+
+The system has unit tests at every joint (114 passing). What it lacks is end-to-end verification: does rain actually become ocean when real LLMs respond?
+
+### Testing levels
+
+**Level 1: Unit tests (existing).** MockSource replaces real LLMs. Fast, deterministic. Tests the flow structure, the type transitions, the graceful degradation. These are the bedrock and remain unchanged.
+
+**Level 2: Vessel integration tests (next).** Verify the tmux plumbing works without real LLMs. Use a simple echo process (e.g., `cat` or a shell script that echoes input) in each pane. Verify:
+- Session creation and pane splitting
+- Sending input and capturing output
+- Concurrent sends to multiple panes
+- Session cleanup
+- Graceful handling of tmux not being installed
+
+These tests require tmux but not Claude or llama.cpp. They can run in CI.
+
+**Level 3: Full end-to-end tests.** Real tmux + real LLM providers. Mark as `#[ignore]` by default -- they are slow, require credentials, and cost money (or Claude Max subscription). Run manually or in a dedicated CI job.
+
+Verify:
+- A Droplet flows through desert and produces a coherent ocean
+- A Shower flows through two springs, the confluence weaves, the lake settles
+- A Downpour uses all three springs with real eddy detection and yielding
+- A Storm decomposes, sub-flows execute, higher confluence assembles
+- Vapor carries context across multiple flows (multi-turn conversation)
+- The vessel panes show the full conversation for each spring
+
+### Property-based tests (future)
+
+Properties that should hold regardless of input:
+- Water always reaches the ocean (no panics, no hangs)
+- The ocean contains no system internals (prompt text, type names, debug info)
+- Vapor grows with each flow
+- Sub-flows do not pollute vapor
+
+`proptest` can verify these across thousands of random inputs when the cost is justified.
 
 ---
 

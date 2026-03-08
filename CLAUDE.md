@@ -29,14 +29,13 @@ cargo test --all-targets
 ```
 src/
   water/          # Core types: Vapor, Rain, Stream, River, Ocean
-  watershed/      # Spring trait, VolumeSensor, spring implementations
+  watershed/      # Spring trait, VolumeSensor, MineralClassifier, spring implementations
     source/       # LlmSource trait, ClaudeCliSource, LlamaSource
-  vessel/         # tmux session management (the window, not the mountain)
-  confluence/     # Eddy detection, yielding, stream merging
+    springs/      # Mountain, Desert, Forest spring implementations
+  vessel/         # tmux session — the observable space where springs flow
+  confluence/     # Decomposition, eddy detection, yielding, stream merging
   still_lake/     # Final refinement (the five questions)
-  creation/       # Book, podcast, software creation flows
-  config/         # Configuration loading
-  flow.rs         # TaoFlow — the complete Rain to Ocean journey
+  flow.rs         # TaoFlow — single-pass and recursive Rain to Ocean journey
   error.rs        # FlowError hierarchy
 ```
 
