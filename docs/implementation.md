@@ -340,17 +340,28 @@ Mountain and Desert implement the Spring trait. `ClaudeCliSource` uses `claude -
 **Phase 3: The Confluence** *(complete)*
 Forest Spring joins mountain and desert -- three streams now flow. The Confluence Pool weaves multiple perspectives into one river through an LLM integrator. Single streams pass through untouched (wu wei). `simple_merge` is dropped. The `/reflecting-pool` skill emerges -- the system learns to look inward.
 
-**Phase 4: Add Yielding**
-When real eddies emerge, implement the Yielding protocol (`/vessel confluence/yielding`). This is where the system's true nature begins to manifest. Property-based tests verify that yielding always produces resolution. Use `/still-lake` to review the protocol for the five qualities.
+**Phase 4: Yielding**
+When three streams merge, they will sometimes disagree. Implement eddy detection -- the confluence analyzes streams for divergence and classifies each eddy (Factual, Interpretive, Stylistic, Structural). The yielding protocol asks each position to find truth in the other. Resolution through yielding, not voting. Property-based tests verify that yielding always produces resolution.
 
 **Phase 5: The Still Lake**
-Add the final refinement pass (`/vessel still_lake/lake`). The system now flows from Rain to Ocean through all phases. Integration tests verify the full journey. Use `/rain suite` to watch water flow through every stage.
+The final refinement pass. The lake reads `River::clarity` to know how much settling is needed -- high clarity means gentle polish, low clarity (many tributaries, unresolved eddies) means deeper settling. The lake asks the five questions (clarity, wholeness, kindness, truth, simplicity) and produces an Ocean. The flow is now complete: Rain → Watershed → Confluence → Still Lake → Ocean.
 
-**Phase 6: Creation Flows**
-Implement the specialized creation flows for books, podcasts, and software. Each builds on the core watershed. Test that created software contains its own tests -- the recursive riverbank. New skills may emerge as creation patterns solidify.
+**Phase 6: The Return**
+*"Return is the movement of the Tao."* -- Chapter 40
 
-**Phase 7: The Storm**
-Implement recursive flow -- the ability for water to cycle back through the watershed for transformative requests. Property-based tests verify that storms always eventually reach the ocean.
+The water cycle must cycle. A Storm-level request cannot be answered in one pass. Phase 6 makes the flow recursive:
+
+1. **Decomposition** -- a River that is too wide and shallow is broken into parts. Each part becomes new Rain, carrying the context of the whole.
+2. **Recursive flow** -- each part flows through the watershed independently. Springs respond, streams merge, rivers form. This is the same flow, operating at a finer grain.
+3. **Higher confluence** -- the sub-rivers merge at a higher level. The same ConfluencePool weaves them, but now it weaves refined parts rather than raw streams.
+4. **Termination** -- the system knows when to stop cycling. Perhaps clarity itself is the signal: when the river is clear enough, stop and let it reach the ocean.
+
+The system should create the way it was created. Tao Flow was built through a series of artifacts -- philosophy first, then architecture, then implementation plan, then phases of work. A Storm-level request follows the same pattern: understand the seed (vision), design the structure, plan the phases, work each phase, assemble the whole, refine.
+
+**Human guidance is a spectrum.** The system should yield to the human's natural level of engagement. Some humans will want to guide every step -- approving each artifact, providing wisdom to every agent. Some will set direction and review at milestones. Some will provide the seed and receive the ocean. The system does not force a level of involvement. It presents its work at natural pause points, and the human engages as much or as little as they choose. The vapor carries the human's presence.
+
+**Phase 7: Creation**
+The fruit of the return. With recursive flow in place, the system can create real artifacts -- books, podcasts, software, designs. Creation is not a separate module; it is what happens naturally when Storm volume triggers the water cycle to actually cycle. The specialization lives in the system prompts (the riverbed), not in separate creation machinery. Each creation type may bring its own prompts, its own natural pause points, its own questions for the human -- but the flow is the same flow. New skills will emerge as creation patterns solidify.
 
 ---
 
