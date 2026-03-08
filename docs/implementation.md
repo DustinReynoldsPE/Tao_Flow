@@ -102,7 +102,7 @@ This architecture provides:
 
 The `LlmSource` trait is the underground aquifer -- the hidden water source that feeds each spring. Two sources fill it:
 - `ClaudeCliSource` -- stateless `claude -p` calls (the default, the natural spring)
-- `AnthropicSource` -- direct API calls via `reqwest` (for users who prefer API access)
+- `LlamaSource` -- llama.cpp server via its OpenAI-compatible API (for local models)
 
 **tmux is the vessel, not the source.** It provides the walls of the space each agent occupies. Each window allows the user to perceive the agent -- much like you can see the mountain outside of a window, but the window is not the mountain. The vessel carries the conversation naturally; the spring does not need to carry its own memory.
 
@@ -141,7 +141,7 @@ tao_flow/
       source/
         mod.rs                  # LlmSource trait -- the underground aquifer
         claude_cli.rs           # Claude CLI source (claude -p, the natural spring)
-        anthropic.rs            # Direct API source (alternative)
+        llama.rs                # llama.cpp server (local models)
       spring.rs                 # The Spring trait (LLM wrapper)
       springs/
         mod.rs
@@ -926,8 +926,8 @@ All work flows through branches. Main is the ocean floor -- stable, settled, tes
 **Phase 1: The Vessel** *(complete)*
 Set up the Rust project. Define the water types. Implement the `Spring` trait. Write the first tests. The compiler is the first master. `cargo test` passes green. CI enforces the riverbanks on every push. Skills are defined: `/riverbank`, `/spring`, `/vessel`, `/still-lake`, `/rain`, `/confluence`, `/flow`.
 
-**Phase 2: Two Springs** *(in progress)*
-Mountain (Claude Opus) and Desert (Claude Haiku) implement the Spring trait. `ClaudeCliSource` uses `claude -p` -- the natural spring. No API keys, no per-token pricing. Claude Max users drink from the river they already have. tmux sustains the vessel -- persistent windows where springs flow and conversations deepen naturally. `AnthropicSource` remains as an alternative for API users. Simple merge selects the deepest stream. Watershed dispatches concurrently.
+**Phase 2: Two Springs** *(complete)*
+Mountain and Desert implement the Spring trait. `ClaudeCliSource` uses `claude -p` -- the natural spring. `LlamaSource` connects to local llama.cpp servers. tmux sustains the vessel. Simple merge selects the deepest stream. Watershed dispatches concurrently.
 
 **Phase 3: Add the Confluence**
 Add the Forest Spring (`/spring forest`). Now three streams can diverge. The Confluence Pool becomes necessary. Implement the basic merging logic. Use `/vessel confluence/pool` to scaffold. Write integration tests that verify three streams merge into one river. Use `/confluence` to review the integration.
