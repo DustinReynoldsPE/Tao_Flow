@@ -11,6 +11,7 @@ pub struct TmuxVessel {
     window: String,
     model: String,
     command: Option<String>,
+    sentinel: Option<String>,
     initialized: bool,
 }
 
@@ -25,6 +26,7 @@ impl TmuxVessel {
             window: window.into(),
             model: model.into(),
             command: None,
+            sentinel: None,
             initialized: false,
         }
     }
@@ -34,6 +36,17 @@ impl TmuxVessel {
     /// with echo processes or other programs.
     pub fn with_command(mut self, command: impl Into<String>) -> Self {
         self.command = Some(command.into());
+        self
+    }
+
+    /// Set a sentinel pattern that signals the process is ready for input.
+    /// When set, the vessel waits for this pattern to appear after the
+    /// input line instead of polling for content stability.
+    ///
+    /// Chapter 15: "Do you have the patience to wait till your mud
+    /// settles and the water is clear?"
+    pub fn with_sentinel(mut self, sentinel: impl Into<String>) -> Self {
+        self.sentinel = Some(sentinel.into());
         self
     }
 
@@ -131,21 +144,44 @@ impl TmuxVessel {
         Ok(())
     }
 
+    /// Capture the full pane content including scrollback history.
+    ///
+    /// Uses `-S -` and `-E -` for complete scrollback (pattern adopted
+    /// from tmux-lib, without the dependency). `-J` joins wrapped lines.
+    async fn capture_pane(&self) -> Result<String, FlowError> {
+        let output = Command::new("tmux")
+            .args([
+                "capture-pane",
+                "-t",
+                &self.target(),
+                "-p", // output to stdout
+                "-J", // join wrapped lines
+                "-S",
+                "-", // from start of scrollback
+                "-E",
+                "-", // to end of scrollback
+            ])
+            .output()
+            .await
+            .map_err(|e| FlowError::SpringFailure {
+                name: self.window.clone(),
+                reason: format!("Failed to capture pane: {e}"),
+            })?;
+
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    }
+
     /// Send a message through the vessel and capture the response.
     ///
-    /// The vessel sends input to the tmux pane and waits for the
-    /// output to stabilize -- the water settles in the vessel.
+    /// Two modes of waiting:
+    /// - **Sentinel**: if set, waits for the sentinel pattern to appear
+    ///   after the input line (the process signals readiness).
+    /// - **Stability**: if no sentinel, waits for pane content to stop
+    ///   changing (the mud settles on its own).
     pub async fn send(&self, input: &str) -> Result<String, FlowError> {
         if input.is_empty() {
             return Ok(String::new());
         }
-
-        // Clear the pane to isolate the new response
-        Command::new("tmux")
-            .args(["send-keys", "-t", &self.target(), "", ""])
-            .status()
-            .await
-            .ok();
 
         // Send the input
         Command::new("tmux")
@@ -157,7 +193,7 @@ impl TmuxVessel {
                 reason: format!("Failed to send to tmux: {e}"),
             })?;
 
-        // Wait for response -- poll until the pane content stabilizes.
+        // Wait for response
         let mut last_content = String::new();
         let mut stable_count = 0;
         let max_wait = 60; // seconds
@@ -166,40 +202,60 @@ impl TmuxVessel {
         for _ in 0..(max_wait * 2) {
             tokio::time::sleep(poll_interval).await;
 
-            let output = Command::new("tmux")
-                .args(["capture-pane", "-t", &self.target(), "-p"])
-                .output()
-                .await
-                .map_err(|e| FlowError::SpringFailure {
-                    name: self.window.clone(),
-                    reason: format!("Failed to capture pane: {e}"),
-                })?;
+            let content = self.capture_pane().await?;
 
-            let content = String::from_utf8_lossy(&output.stdout).to_string();
+            if let Some(ref sentinel) = self.sentinel {
+                // Sentinel mode: look for readiness signal after input
+                let after_input: Vec<&str> = content
+                    .lines()
+                    .skip_while(|line| !line.contains(input))
+                    .skip(1)
+                    .collect();
 
-            if content == last_content {
-                stable_count += 1;
-                if stable_count >= 4 {
-                    // Content has been stable for 2 seconds
+                let sentinel_found = after_input
+                    .iter()
+                    .rev()
+                    .find(|l| !l.trim().is_empty())
+                    .map(|line| line.contains(sentinel.as_str()))
+                    .unwrap_or(false);
+
+                last_content = content;
+                if sentinel_found {
                     break;
                 }
             } else {
-                stable_count = 0;
-                last_content = content;
+                // Stability mode: content unchanged for 2 seconds
+                if content == last_content {
+                    stable_count += 1;
+                    if stable_count >= 4 {
+                        break;
+                    }
+                } else {
+                    stable_count = 0;
+                    last_content = content;
+                }
             }
         }
 
-        // Extract the response (everything after the input)
-        let response = last_content
+        // Extract response: everything between input and sentinel
+        let mut lines: Vec<&str> = last_content
             .lines()
             .skip_while(|line| !line.contains(input))
-            .skip(1) // skip the input line itself
-            .collect::<Vec<_>>()
-            .join("\n")
-            .trim()
-            .to_string();
+            .skip(1)
+            .collect();
 
-        Ok(response)
+        // Strip sentinel line from the end if present
+        if let Some(ref sentinel) = self.sentinel {
+            while let Some(last) = lines.last() {
+                if last.contains(sentinel.as_str()) || last.trim().is_empty() {
+                    lines.pop();
+                } else {
+                    break;
+                }
+            }
+        }
+
+        Ok(lines.join("\n").trim().to_string())
     }
 
     /// Kill the tmux session this vessel belongs to.

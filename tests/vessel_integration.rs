@@ -221,3 +221,35 @@ async fn tmux_pane_source_sends_only_last_user_message() {
 
     cleanup(session).await;
 }
+
+#[tokio::test]
+#[ignore]
+async fn vessel_sentinel_detection() {
+    if !tmux_available().await {
+        return;
+    }
+    let session = "tao-test-sentinel";
+    cleanup(session).await;
+
+    // A process that echoes input and shows a prompt when ready.
+    // The sentinel tells the vessel "the process is done responding."
+    let cmd = r#"bash -c 'echo -n "ready> "; while IFS= read -r line; do echo "echo: $line"; echo -n "ready> "; done'"#;
+
+    let mut vessel = TmuxVessel::new(session, "test", "unused")
+        .with_command(cmd)
+        .with_sentinel("ready>");
+    vessel.prepare("unused").await.unwrap();
+
+    let response = vessel.send("test sentinel").await.unwrap();
+    assert!(
+        response.contains("echo: test sentinel"),
+        "sentinel vessel should capture response, got: {response:?}"
+    );
+    // The sentinel line itself should be stripped from the response
+    assert!(
+        !response.contains("ready>"),
+        "sentinel should be stripped from response, got: {response:?}"
+    );
+
+    vessel.teardown().await.unwrap();
+}

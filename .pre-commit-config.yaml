@@ -21,3 +21,10 @@ repos:
         language: system
         pass_filenames: false
         types: [rust]
+
+      - id: vessel-integration
+        name: vessel integration
+        entry: cargo test --test vessel_integration -- --ignored
+        language: system
+        pass_filenames: false
+        types: [rust]
