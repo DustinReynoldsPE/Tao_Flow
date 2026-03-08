@@ -1,14 +1,17 @@
-use crate::confluence::ConfluencePool;
+use crate::confluence::{ConfluencePool, Decomposer};
 use crate::error::FlowError;
 use crate::still_lake::StillLake;
-use crate::water::{Message, Ocean, Rain, Role, Vapor};
-use crate::watershed::Watershed;
+use crate::water::rain::Volume;
+use crate::water::{Message, Ocean, Rain, Role, Stream, Vapor};
+use crate::watershed::{VolumeSensor, Watershed};
 
 pub struct TaoFlow {
     watershed: Watershed,
     confluence: ConfluencePool,
     still_lake: StillLake,
+    decomposer: Option<Decomposer>,
     vapor: Vapor,
+    max_depth: usize,
 }
 
 impl TaoFlow {
@@ -17,12 +20,94 @@ impl TaoFlow {
             watershed,
             confluence,
             still_lake,
+            decomposer: None,
             vapor: Vapor::default(),
+            max_depth: 1,
         }
     }
 
+    pub fn with_decomposer(mut self, decomposer: Decomposer) -> Self {
+        self.decomposer = Some(decomposer);
+        self
+    }
+
+    pub fn with_max_depth(mut self, max_depth: usize) -> Self {
+        self.max_depth = max_depth;
+        self
+    }
+
     pub async fn flow(&mut self, user_input: &str) -> Result<String, FlowError> {
-        let mut rain = Rain::new(user_input, self.vapor.clone());
+        let rain = Rain::new(user_input, self.vapor.clone());
+        let ocean = self.flow_inner(rain, 0).await?;
+
+        self.vapor.conversation_history.push(Message {
+            role: Role::User,
+            content: user_input.to_string(),
+        });
+        self.vapor.conversation_history.push(Message {
+            role: Role::Assistant,
+            content: ocean.content.clone(),
+        });
+
+        Ok(ocean.content)
+    }
+
+    /// Routes rain through either recursive or single-pass flow.
+    ///
+    /// Storm volume at depth < max_depth triggers decomposition.
+    /// All other rain, or failed decomposition, uses single pass.
+    async fn flow_inner(&self, rain: Rain, depth: usize) -> Result<Ocean, FlowError> {
+        let volume = VolumeSensor::new().sense(&rain);
+
+        if volume == Volume::Storm && depth < self.max_depth && self.decomposer.is_some() {
+            match self.decompose_and_flow(rain.clone(), depth).await {
+                Ok(ocean) => Ok(ocean),
+                Err(_) => self.single_pass(rain).await,
+            }
+        } else {
+            self.single_pass(rain).await
+        }
+    }
+
+    /// The return: decompose, flow each part, reassemble.
+    async fn decompose_and_flow(&self, rain: Rain, depth: usize) -> Result<Ocean, FlowError> {
+        let decomposer = self.decomposer.as_ref().unwrap();
+        let sub_questions = decomposer.decompose(&rain.raw_input).await?;
+
+        // Each sub-question flows through the full journey independently.
+        // Sub-questions carry the parent's vapor for context but do not update it.
+        let futures: Vec<_> = sub_questions
+            .iter()
+            .map(|q| self.flow_inner(Rain::new(q.as_str(), rain.vapor.clone()), depth + 1))
+            .collect();
+
+        let results = futures::future::join_all(futures).await;
+
+        // Collect successful sub-flows as tributaries for higher confluence
+        let sub_streams: Vec<Stream> = results
+            .into_iter()
+            .enumerate()
+            .filter_map(|(i, result)| {
+                result
+                    .ok()
+                    .filter(|o| o.has_substance())
+                    .map(|ocean| Stream::new(format!("tributary_{}", i + 1), ocean.content))
+            })
+            .collect();
+
+        if sub_streams.is_empty() {
+            return Err(FlowError::Drought);
+        }
+
+        // Higher confluence: the sub-rivers merge
+        let river = self.confluence.merge(sub_streams, &rain.raw_input).await?;
+
+        // Final settling
+        self.still_lake.settle(river, &rain.raw_input).await
+    }
+
+    /// The single-pass journey: watershed → confluence → still lake → ocean.
+    async fn single_pass(&self, mut rain: Rain) -> Result<Ocean, FlowError> {
         let streams = self.watershed.receive_rain(&mut rain).await;
 
         if streams.is_empty() {
@@ -30,21 +115,7 @@ impl TaoFlow {
         }
 
         let river = self.confluence.merge(streams, &rain.raw_input).await?;
-        let ocean = self.still_lake.settle(river, &rain.raw_input).await?;
-        self.update_vapor(&rain, &ocean);
-
-        Ok(ocean.content)
-    }
-
-    fn update_vapor(&mut self, rain: &Rain, ocean: &Ocean) {
-        self.vapor.conversation_history.push(Message {
-            role: Role::User,
-            content: rain.raw_input.clone(),
-        });
-        self.vapor.conversation_history.push(Message {
-            role: Role::Assistant,
-            content: ocean.content.clone(),
-        });
+        self.still_lake.settle(river, &rain.raw_input).await
     }
 
     pub fn vapor(&self) -> &Vapor {
@@ -110,6 +181,12 @@ mod tests {
     fn test_lake(response: &str) -> StillLake {
         StillLake::new(Box::new(MockSource::new(response)))
     }
+
+    fn test_decomposer(response: &str) -> Decomposer {
+        Decomposer::new(Box::new(MockSource::new(response)))
+    }
+
+    // --- Existing single-pass tests ---
 
     #[tokio::test]
     async fn rain_flows_to_ocean() {
@@ -189,5 +266,118 @@ mod tests {
         let mut tao = TaoFlow::new(watershed, confluence, lake);
         let result = tao.flow("hello").await;
         assert!(result.is_err());
+    }
+
+    // --- Phase 6: The Return ---
+
+    #[tokio::test]
+    async fn storm_with_decomposer_flows() {
+        let watershed = Watershed::new(vec![
+            mountain_spring("Mountain's wisdom on the sub-topic."),
+            desert_spring("Desert's speed on the sub-topic."),
+        ]);
+        let confluence = test_confluence("Woven response.");
+        let lake = test_lake("Settled response.");
+        let decomposer = test_decomposer(
+            "Q: What is the philosophical foundation?\nQ: What are the practical applications?",
+        );
+
+        let mut tao = TaoFlow::new(watershed, confluence, lake).with_decomposer(decomposer);
+
+        // Storm-level input (>100 words)
+        let storm_input = "word ".repeat(101);
+        let result = tao.flow(&storm_input).await.unwrap();
+        assert!(!result.is_empty());
+    }
+
+    #[tokio::test]
+    async fn storm_without_decomposer_single_passes() {
+        let watershed = Watershed::new(vec![
+            mountain_spring("Mountain's response."),
+            desert_spring("Desert's response."),
+        ]);
+        let confluence = test_confluence("Woven.");
+        let lake = test_lake("Settled.");
+        let mut tao = TaoFlow::new(watershed, confluence, lake);
+
+        let storm_input = "word ".repeat(101);
+        let result = tao.flow(&storm_input).await.unwrap();
+        assert!(!result.is_empty());
+    }
+
+    #[tokio::test]
+    async fn decomposition_failure_falls_back_to_single_pass() {
+        let watershed =
+            Watershed::new(vec![mountain_spring("Mountain."), desert_spring("Desert.")]);
+        let confluence = test_confluence("Woven.");
+        let lake = test_lake("Settled.");
+        // DrySource causes decomposition to fail
+        let decomposer = Decomposer::new(Box::new(DrySource));
+
+        let mut tao = TaoFlow::new(watershed, confluence, lake).with_decomposer(decomposer);
+
+        let storm_input = "word ".repeat(101);
+        let result = tao.flow(&storm_input).await.unwrap();
+        // Graceful fallback: single-pass still produces output
+        assert!(!result.is_empty());
+    }
+
+    #[tokio::test]
+    async fn vapor_updated_once_after_recursive_flow() {
+        let watershed = Watershed::new(vec![
+            mountain_spring("Response."),
+            desert_spring("Response."),
+        ]);
+        let confluence = test_confluence("Woven.");
+        let lake = test_lake("Settled.");
+        let decomposer = test_decomposer("Q: Sub one?\nQ: Sub two?");
+
+        let mut tao = TaoFlow::new(watershed, confluence, lake).with_decomposer(decomposer);
+
+        let storm_input = "word ".repeat(101);
+        tao.flow(&storm_input).await.unwrap();
+
+        // Only the top-level exchange is recorded, not sub-flows
+        assert_eq!(tao.vapor().conversation_history.len(), 2);
+        assert_eq!(tao.vapor().conversation_history[0].role, Role::User);
+        assert_eq!(tao.vapor().conversation_history[1].role, Role::Assistant);
+    }
+
+    #[tokio::test]
+    async fn non_storm_ignores_decomposer() {
+        let watershed = Watershed::new(vec![desert_spring("Quick.")]);
+        let confluence = test_confluence("unused");
+        let lake = test_lake("unused");
+        // Decomposer would fail if called (single question = error)
+        let decomposer = test_decomposer("Q: Only one question.");
+
+        let mut tao = TaoFlow::new(watershed, confluence, lake).with_decomposer(decomposer);
+
+        // Shower-level input — should not trigger decomposition
+        let result = tao.flow("What is the Tao?").await.unwrap();
+        assert_eq!(result, "Quick.");
+    }
+
+    #[tokio::test]
+    async fn max_depth_prevents_infinite_recursion() {
+        let watershed = Watershed::new(vec![
+            mountain_spring("Response."),
+            desert_spring("Response."),
+        ]);
+        let confluence = test_confluence("Woven.");
+        let lake = test_lake("Settled.");
+        // Decomposer returns long sub-questions that would also be Storm volume
+        let long_sub = "word ".repeat(110);
+        let decomposer = test_decomposer(&format!("Q: {}\nQ: {}", long_sub, long_sub));
+
+        let mut tao = TaoFlow::new(watershed, confluence, lake)
+            .with_decomposer(decomposer)
+            .with_max_depth(1);
+
+        let storm_input = "word ".repeat(120);
+        // Should complete without infinite recursion — sub-questions at depth 1
+        // exceed max_depth so they single-pass
+        let result = tao.flow(&storm_input).await.unwrap();
+        assert!(!result.is_empty());
     }
 }
