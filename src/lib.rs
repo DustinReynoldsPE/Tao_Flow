@@ -11,6 +11,7 @@ pub mod watershed;
 pub use confluence::ConfluencePool;
 pub use error::FlowError;
 pub use flow::TaoFlow;
+pub use still_lake::StillLake;
 pub use water::{Ocean, Rain, River, Stream, Vapor};
 
 #[cfg(test)]
