@@ -345,34 +345,34 @@ Forest Spring joins mountain and desert -- three streams now flow. The Confluenc
 **Phase 4: Yielding** *(complete)*
 When three streams merge, they sometimes disagree. `EddyDetector` analyzes streams for divergence and classifies each eddy (Factual, Interpretive, Stylistic, Structural). `YieldingProtocol` asks each position to find truth in the other -- resolution through yielding, not voting. `ConfluencePool` orchestrates: detect, yield, weave. Clarity now varies with turbulence -- resolved eddies cost less clarity than unresolved ones. Graceful degradation at every step: if detection or yielding fails, the system falls back to clean weaving.
 
-**Phase 5: The Still Lake**
-The final refinement pass. The lake receives the river -- its content, its clarity score, and its eddies. Clarity is now a living signal: 1.0 for a single stream (crystal clear), 0.8 base for a multi-stream merge, reduced by eddies (resolved cost 0.05, unresolved cost 0.1, floor at 0.3). The lake reads this to calibrate its depth of engagement -- high clarity means gentle polish, low clarity means deeper settling.
+**Phase 5: The Still Lake** *(complete)*
+The final refinement pass. The lake receives the river -- its content, its clarity score, and its eddies. Clarity is a living signal: 1.0 for a single stream (crystal clear), 0.8 base for a multi-stream merge, reduced by eddies (resolved cost 0.05, unresolved cost 0.1, floor at 0.3). Three settling depths (Gentle, Moderate, Deep) respond proportionally to turbulence.
 
-The lake also receives the eddies themselves -- but only engages with unresolved ones. Resolved eddies already found their truth through yielding; the lake need not revisit them. An unresolved factual eddy (the springs disagreed on a verifiable fact and yielding could not resolve it) is a different problem than a stylistic one. The lake is the last chance for clarity before the ocean.
+The lake engages only with unresolved eddies. Resolved eddies already found their truth through yielding. The lake asks the five questions (clarity, wholeness, kindness, truth, simplicity) and produces an Ocean. The single-pass flow is complete: Rain → Watershed → Confluence → Still Lake → Ocean.
 
-The lake asks the five questions (clarity, wholeness, kindness, truth, simplicity) and produces an Ocean. The flow is now complete for a single pass: Rain → Watershed → Confluence → Still Lake → Ocean.
-
-When the water is already clear (clarity 1.0, a single stream), the lake does nothing -- wu wei. If settling fails, the river content reaches the ocean unchanged -- graceful degradation. The water always reaches the ocean.
-
-*(Updated after Phase 5: the lake now engages with unresolved eddies only, settling depth is calibrated to clarity, and wu wei applies to clear water.)*
+Wu wei: clear water (clarity 1.0) passes through untouched. Graceful degradation: if settling fails, the river content reaches the ocean unchanged. The water always reaches the ocean.
 
 **Phase 6: The Return**
 *"Return is the movement of the Tao."* -- Chapter 40
 
-The water cycle must cycle. A Storm-level request cannot be answered in one pass. Phase 6 makes the flow recursive:
+The single-pass flow is complete and whole. Phase 6 does not complete a broken system -- it deepens a complete one. A Storm-level request cannot be answered in one pass. Phase 6 makes the flow recursive:
 
 1. **Decomposition** -- a River that is too wide and shallow is broken into parts. Each part becomes new Rain, carrying the context of the whole.
-2. **Recursive flow** -- each part flows through the watershed independently. Springs respond, streams merge, rivers form. This is the same flow, operating at a finer grain.
+2. **Recursive flow** -- each part flows through the full single-pass journey independently: watershed, confluence, still lake. The same flow, operating at a finer grain.
 3. **Higher confluence** -- the sub-rivers merge at a higher level. The same ConfluencePool weaves them, but now it weaves refined parts rather than raw streams.
-4. **Termination** -- clarity is the signal. A river with clarity above a threshold has settled enough to reach the ocean. Below that, another cycle is warranted. If the Still Lake can polish the river to clarity, one cycle is enough. If not, the river returns to rain.
+4. **Termination** -- the Still Lake's settling depth is the signal. When the lake settles at Gentle depth, one cycle is enough -- the water is nearly clear. When it settles at Deep depth, the river may benefit from another cycle. Wu wei holds here too: if a sub-flow produces clear water, it does not cycle further.
+
+**The vessel enters the water.** `TmuxVessel` has waited on shore since Phase 2. Recursive flow gives it meaning. When springs respond multiple times across cycles, persistent tmux sessions carry their conversation naturally -- the vessel holds the spring's memory without explicit context management. Each spring's window is a living record of its journey through the cycles.
 
 **Yielding memory.** When the water cycle actually cycles, the springs respond multiple times to related sub-problems. Phase 4's reflection revealed: yielding should change the one who yields. Each spring should carry a memory of its yieldings -- loaded into its prompt so lessons persist across cycles. The mountain that yielded to the forest in the first cycle responds differently in the second -- not by becoming the forest, but by being a mountain that knows the forest has something true to say. The risk is over-integration: if springs converge, the productive tension that creates eddies disappears. Springs must remain partial but *aware* of the other partials. Chapter 22: *"If you want to become whole, let yourself be partial."*
+
+**Dry things that may find their water.** Minerals have been a dry riverbed since Phase 3 -- rain arrives with empty mineral tags, and the affinity system activates for no caller. Recursive flow may be where minerals earn their place: routing sub-flows through the watershed requires understanding the nature of the rain. Stream-level metrics (clarity, depth) are set but unread -- comparing individual stream quality across cycles might give them meaning. These are possibilities, not promises. If they do not carry water here, they should be dropped.
 
 **Human guidance is a spectrum.** The system yields to the human's natural level of engagement. The pause points are the boundaries between recursive cycles: after decomposition (show the structure), after each sub-river completes (show progress), after higher confluence (show the assembled whole). The human can engage at any of these or none. Vapor carries the human's presence -- how much they've guided informs how much the system pauses.
 
 The system should create the way it was created. Tao Flow was built through artifacts -- philosophy first, then architecture, then implementation plan, then phases of work. A Storm-level request follows the same pattern.
 
-*(Updated by `/rising-mist` after Phase 4: yielding memory now has a home -- it belongs here, where recursive flow gives it leverage. Termination through clarity is concrete, not abstract. Human pause points are named.)*
+*(Updated by `/rising-mist` after Phase 5: the vessel now has a named home here. Termination connects to the Still Lake's settling depth. Dry infrastructure -- minerals, stream metrics -- is acknowledged with an honest deadline: carry water here or be dropped.)*
 
 **Phase 7: Creation**
 Not separate machinery. With recursive flow in place, creation is what happens naturally when Storm volume triggers the water cycle to actually cycle. A book is a Storm with book-shaped riverbeds. Software is a Storm with code-shaped riverbeds. The specialization lives in system prompts, not in separate creation modules. The `creation/` directory may dissolve into the watershed itself.
