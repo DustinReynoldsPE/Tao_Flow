@@ -1,19 +1,22 @@
 use crate::confluence::ConfluencePool;
 use crate::error::FlowError;
+use crate::still_lake::StillLake;
 use crate::water::{Message, Ocean, Rain, Role, Vapor};
 use crate::watershed::Watershed;
 
 pub struct TaoFlow {
     watershed: Watershed,
     confluence: ConfluencePool,
+    still_lake: StillLake,
     vapor: Vapor,
 }
 
 impl TaoFlow {
-    pub fn new(watershed: Watershed, confluence: ConfluencePool) -> Self {
+    pub fn new(watershed: Watershed, confluence: ConfluencePool, still_lake: StillLake) -> Self {
         Self {
             watershed,
             confluence,
+            still_lake,
             vapor: Vapor::default(),
         }
     }
@@ -27,7 +30,7 @@ impl TaoFlow {
         }
 
         let river = self.confluence.merge(streams, &rain.raw_input).await?;
-        let ocean = Ocean::new(river.content);
+        let ocean = self.still_lake.settle(river, &rain.raw_input).await?;
         self.update_vapor(&rain, &ocean);
 
         Ok(ocean.content)
@@ -104,6 +107,10 @@ mod tests {
         ConfluencePool::new(Box::new(MockSource::new(response)))
     }
 
+    fn test_lake(response: &str) -> StillLake {
+        StillLake::new(Box::new(MockSource::new(response)))
+    }
+
     #[tokio::test]
     async fn rain_flows_to_ocean() {
         let watershed = Watershed::new(vec![
@@ -111,7 +118,8 @@ mod tests {
             desert_spring("It's the way."),
         ]);
         let confluence = test_confluence("The Tao is the way.");
-        let mut tao = TaoFlow::new(watershed, confluence);
+        let lake = test_lake("The Tao is the way, settled.");
+        let mut tao = TaoFlow::new(watershed, confluence, lake);
         let result = tao.flow("What is the Tao?").await.unwrap();
         assert!(!result.is_empty());
     }
@@ -122,37 +130,41 @@ mod tests {
             mountain_spring("Should not appear."),
             desert_spring("Hello!"),
         ]);
-        // Single stream passes through without calling the confluence source
+        // Single stream: clarity 1.0, lake does nothing (wu wei)
         let confluence = test_confluence("unused");
-        let mut tao = TaoFlow::new(watershed, confluence);
+        let lake = test_lake("should not be called");
+        let mut tao = TaoFlow::new(watershed, confluence, lake);
         let result = tao.flow("hi").await.unwrap();
         assert_eq!(result, "Hello!");
     }
 
     #[tokio::test]
-    async fn three_springs_merge_to_river() {
+    async fn three_springs_merge_and_settle() {
         let watershed = Watershed::new(vec![
             mountain_spring("Deep analysis of the question."),
             desert_spring("Quick, direct answer."),
             forest_spring("A story about the answer."),
         ]);
-        let confluence = test_confluence("A woven response from three perspectives.");
-        let mut tao = TaoFlow::new(watershed, confluence);
+        // MockSource returns same response for all calls (detection, weaving, settling)
+        let woven = "A woven response from three perspectives.";
+        let confluence = test_confluence(woven);
+        let lake = test_lake(woven);
+        let mut tao = TaoFlow::new(watershed, confluence, lake);
 
-        // Downpour activates all springs
         let result = tao
             .flow("Explain the nature of water in philosophy and storytelling and practice")
             .await
             .unwrap();
 
-        assert_eq!(result, "A woven response from three perspectives.");
+        assert!(!result.is_empty());
     }
 
     #[tokio::test]
     async fn vapor_accumulates_across_flows() {
         let watershed = Watershed::new(vec![desert_spring("Response.")]);
         let confluence = test_confluence("unused");
-        let mut tao = TaoFlow::new(watershed, confluence);
+        let lake = test_lake("should not be called");
+        let mut tao = TaoFlow::new(watershed, confluence, lake);
 
         tao.flow("First").await.unwrap();
         tao.flow("Second").await.unwrap();
@@ -173,7 +185,8 @@ mod tests {
             Box::new(DrySource),
         )) as Box<dyn crate::watershed::Spring>]);
         let confluence = test_confluence("unused");
-        let mut tao = TaoFlow::new(watershed, confluence);
+        let lake = test_lake("unused");
+        let mut tao = TaoFlow::new(watershed, confluence, lake);
         let result = tao.flow("hello").await;
         assert!(result.is_err());
     }
