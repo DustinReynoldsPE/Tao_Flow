@@ -348,11 +348,13 @@ When three streams merge, they sometimes disagree. `EddyDetector` analyzes strea
 **Phase 5: The Still Lake**
 The final refinement pass. The lake receives the river -- its content, its clarity score, and its eddies. Clarity is now a living signal: 1.0 for a single stream (crystal clear), 0.8 base for a multi-stream merge, reduced by eddies (resolved cost 0.05, unresolved cost 0.1, floor at 0.3). The lake reads this to calibrate its depth of engagement -- high clarity means gentle polish, low clarity means deeper settling.
 
-The lake also receives the eddies themselves. An unresolved factual eddy (the springs disagreed on a verifiable fact and yielding could not resolve it) is a different problem than a resolved interpretive one. The lake is the last chance for clarity before the ocean. It examines what the yielding produced and what it couldn't resolve.
+The lake also receives the eddies themselves -- but only engages with unresolved ones. Resolved eddies already found their truth through yielding; the lake need not revisit them. An unresolved factual eddy (the springs disagreed on a verifiable fact and yielding could not resolve it) is a different problem than a stylistic one. The lake is the last chance for clarity before the ocean.
 
 The lake asks the five questions (clarity, wholeness, kindness, truth, simplicity) and produces an Ocean. The flow is now complete for a single pass: Rain → Watershed → Confluence → Still Lake → Ocean.
 
-*(Updated by `/rising-mist` after Phase 4: clarity is no longer abstract -- it carries the turbulence of Phase 4's yielding. The lake's five questions should be calibrated to this signal, and the lake should engage with unresolved eddies directly.)*
+When the water is already clear (clarity 1.0, a single stream), the lake does nothing -- wu wei. If settling fails, the river content reaches the ocean unchanged -- graceful degradation. The water always reaches the ocean.
+
+*(Updated after Phase 5: the lake now engages with unresolved eddies only, settling depth is calibrated to clarity, and wu wei applies to clear water.)*
 
 **Phase 6: The Return**
 *"Return is the movement of the Tao."* -- Chapter 40
