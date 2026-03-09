@@ -8,20 +8,13 @@ use crate::water::Role;
 /// Uses `claude -p` (print mode). No API keys needed.
 pub struct ClaudeCliSource {
     model: String,
-    max_tokens: Option<u32>,
 }
 
 impl ClaudeCliSource {
     pub fn new(model: impl Into<String>) -> Self {
         Self {
             model: model.into(),
-            max_tokens: None,
         }
-    }
-
-    pub fn with_max_tokens(mut self, max_tokens: u32) -> Self {
-        self.max_tokens = Some(max_tokens);
-        self
     }
 
     /// Format conversation history into the prompt.
@@ -65,11 +58,8 @@ impl LlmSource for ClaudeCliSource {
             .arg("--model")
             .arg(&self.model)
             .arg("--system-prompt")
-            .arg(system);
-
-        if let Some(max_tokens) = self.max_tokens {
-            cmd.arg("--max-tokens").arg(max_tokens.to_string());
-        }
+            .arg(system)
+            .env_remove("CLAUDECODE");
 
         // Pass the prompt via stdin
         cmd.stdin(std::process::Stdio::piped());

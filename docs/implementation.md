@@ -373,11 +373,9 @@ The numbered phases are complete. What follows is not Phase 7 -- it is organic g
 
 **Level 3 end-to-end tests.** Real tmux, real LLM providers, the full journey from Rain to Ocean verified. Slow, require credentials, run manually or in a dedicated CI job.
 
-**What may emerge through use.** Two capabilities were anticipated but not built, because the system has not yet met real use:
-- *Yielding memory* -- springs remembering past yieldings, so the mountain that has yielded to the forest responds differently next time (Phase 4's insight). The risk is over-integration: if springs converge, the productive tension that creates eddies disappears.
-- *Human pause points* -- boundaries in recursive flows where the user can guide direction (Phase 3's insight). The shape will emerge from the experience of watching recursive flows in the vessel.
+**Memory: the minerals that remain.** See the dedicated section below. Each component distills what it learned into memories that fade and strengthen like minerals in earth. This subsumes yielding memory -- it is broader, encompassing every component, not just springs.
 
-These are not planned. They are anticipated. A plan commits; an anticipation listens.
+**Human pause points.** Boundaries in recursive flows where the user can guide direction (Phase 3's insight). The shape will emerge from the experience of watching recursive flows in the vessel. Anticipated, not planned.
 
 ---
 
@@ -487,6 +485,179 @@ Properties that should hold regardless of input:
 - Sub-flows do not pollute vapor
 
 `proptest` can verify these across thousands of random inputs when the cost is justified.
+
+---
+
+## Pearls: The Chain of Thought Preserved
+
+*"The Tao is like a well: used but never used up. It is like the eternal void: filled with infinite possibilities."*
+*-- Tao Te Ching, Chapter 4*
+
+When an irritant enters an oyster — a grain of sand, a fragment of shell — the oyster does not reject it. It coats it, layer by layer, with nacre. The result is a pearl: a self-contained, layered capsule built around a central disturbance. The disturbance is preserved at the core. Every layer of response surrounds it.
+
+This is how the system preserves the chain of thought.
+
+### The pearl forms naturally
+
+Every flow through the system — from rain to ocean — produces a pearl. The pearl is not a log. It is not a transcript. It is the layered record of how the system transformed a question into understanding.
+
+```
+.storms/
+  2024-03-08-patience-and-persistence.pearl
+  2024-03-08-what-is-the-tao.pearl
+  2024-03-09-taoism-vs-stoicism.pearl
+```
+
+Each pearl contains every layer of the journey, from core to surface:
+
+```
+Pearl
+  │
+  ├── Core: the original query (rain)
+  │     "How does water teach us about patience and persistence?"
+  │
+  ├── Layer 1: Spring responses (streams)
+  │     Mountain: "Water does not try to be patient..."
+  │     Desert:   "Water teaches patience through its nature..."
+  │
+  ├── Layer 2: Eddy detection (where perspectives diverged)
+  │     EDDY|Interpretive|persistence-mechanism|...
+  │     EDDY|Structural|narrative-arc|...
+  │
+  ├── Layer 3: Yielding (how divergences resolved)
+  │     persistence-mechanism: "Both paths are flow..."
+  │     narrative-arc: "Present as distinct names for one force..."
+  │
+  ├── Layer 4: Merging (the river woven from streams)
+  │     "Water does not try to be patient. That is its deepest teaching..."
+  │
+  ├── Layer 5: Settling (the lake clarifies)
+  │     clarity: 0.65, depth: Deep
+  │     "The response was refined for wholeness and simplicity..."
+  │
+  └── Surface: the ocean (what the user received)
+        "Water does not try to be patient..."
+```
+
+The user opens a pearl and reads from core to surface — seeing exactly how their question was transformed at each stage. Or they read from surface to core — starting with the final answer and drilling into the reasoning that produced it.
+
+### The relationship between pearls and memories
+
+Pearls are the raw material. Memories are the minerals that remain.
+
+After a storm passes and its pearl is formed, each component examines its layer and distills what it learned. The mountain reads its own response and extracts the essence. The confluence reads its eddies and remembers the pattern. The lake reads its settling and notes the turbulence.
+
+```
+storm produces pearl  →  pearl is examined  →  memories are distilled
+(the water)              (the evaporation)     (the minerals)
+```
+
+`.storms/` stores pearls — the complete, layered records. `.memories/` stores minerals — the distilled essences that endure. The pearl preserves everything. Memory preserves only what matters.
+
+Over time, pearls accumulate. Old pearls may be archived or pruned. But the memories they produced endure — fading slowly, reinforced by new storms that touch the same ground.
+
+### What the pearl reveals
+
+The pearl is transparency made permanent. The vessel makes the flow visible in real time — the user watches the springs respond, the eddies form, the river weave. The pearl preserves that visibility after the flow is done. The vessel is the window. The pearl is the photograph.
+
+When the system produces an ocean that surprises or disappoints, the pearl tells the story: which spring saw what, where the eddies formed, how yielding resolved them, what the lake settled. The chain of thought is not hidden. It is layered, readable, and whole.
+
+---
+
+## Memory: The Minerals That Remain
+
+*"Return is the movement of the Tao. Yielding is the way of the Tao."*
+*-- Tao Te Ching, Chapter 40*
+
+When water evaporates from the ocean and returns as rain, the water itself is gone. But the minerals it carried — dissolved from the mountain, filtered through the desert, enriched by the forest — settle into the earth. The earth remembers what flowed through it. Not the water. The minerals.
+
+This is how the system remembers.
+
+### Each component has its own earth
+
+Every component in the flow — each spring, confluence, the lake, the ocean — maintains its own memories as individual files in `.memories/`. Each memory is a distilled essence: not what was said, but what was learned.
+
+```
+.memories/
+  mountain/
+    patience-as-presence.md
+    canyon-carving-metaphor.md
+  desert/
+    tao-definition-pattern.md
+  forest/
+    (empty -- the forest has not yet flowed enough to remember)
+  confluence/
+    philosophical-eddies-resolve-through-synthesis.md
+  lake/
+    clear-water-needs-no-settling.md
+  ocean/
+    water-teaches-through-nature-not-instruction.md
+```
+
+The mountain remembers what the mountain cares about: deep analyses, philosophical threads, architectural patterns. The desert remembers quick patterns, common questions, efficient framings. The forest remembers stories told, emotional resonances, creative threads. Confluence remembers how eddies formed and how yielding resolved them — not the content, but the pattern. The lake remembers what turbulence looked like and what settling required. The ocean remembers what it delivered — the final form.
+
+Each memory is partial. No single component holds the whole picture. Wholeness emerges at confluence, where partial memories from different springs meet.
+
+### The lifecycle of a memory
+
+A memory file carries:
+
+```
+essence:    what was learned, distilled to its core
+strength:   0.0 to 1.0 -- how vivid the memory is
+minerals:   topic tags for relevance matching
+last_seen:  when this memory was last reinforced
+```
+
+**Birth.** After a flow completes, each component distills what it experienced into a brief essence. The mountain does not record the full conversation about patience. It records: "Patience is not enduring difficulty across time. It is being so fully present that time loses its weight." A new memory begins with moderate strength.
+
+**Carry.** Before the next flow, the system loads each component's memories. The strongest, most relevant memories are added to the component's context — the mountain receives its memories of depth, the desert its memories of speed. The component does not know it is remembering. The memories arrive as naturally as the system prompt.
+
+**Reinforcement.** When a memory is relevant to the current flow — when its minerals match the rain's minerals — it grows stronger. The mountain's memory of patience, reinforced by a second question about patience, deepens. The riverbed is carved deeper by repeated flow.
+
+**Decay.** Every memory fades. Time without reinforcement erodes strength. A memory of a conversation three months ago is fainter than one from yesterday. This is not failure — it is Chapter 48: *every day something is dropped.*
+
+**Death.** When a memory's strength falls below a threshold, it dissolves. The file is removed. The earth forgets what no longer matters. The spring returns to its nature, unburdened.
+
+### Why forgetting matters
+
+If springs remembered everything, they would converge. The mountain would echo what the desert said. The forest would repeat the mountain's analysis. The productive tension between springs — the tension that creates eddies, that drives yielding, that produces synthesis — would vanish.
+
+Decay preserves each spring's nature. The mountain forgets the desert's quick answers because quick answers are not the mountain's earth. The desert forgets the mountain's depth because depth does not settle in sand. Each component's memories are shaped by what naturally adheres to its nature.
+
+Over-integration is the death of the system. Three springs that remember the same things are one spring pretending to be three. Forgetting is what keeps the water alive.
+
+### How memories reach the flow
+
+Before each flow, relevant memories are gathered:
+
+```
+for each component:
+    load memories from .memories/{component}/
+    apply time decay to each memory's strength
+    filter by relevance: match memory minerals against rain minerals
+    select the strongest memories (bounded -- not all, not none)
+    weave selected essences into the component's context
+
+after each flow:
+    each component distills what it learned
+    if a memory was reinforced, increase its strength
+    if a new insight emerged, birth a new memory
+    if a memory decayed below threshold, remove it
+    write updated memories back to .memories/
+```
+
+The mineral system already exists. Rain carries minerals (philosophy, architecture, code, narrative). Memories carry minerals. The matching is natural — the infrastructure was built in Phase 6 for spring activation. Now it serves memory retrieval.
+
+### What the distillation is not
+
+The distillation is not a summary. It is not a transcript. It is not conversation history replayed. It is the mineral deposit left after the water evaporated.
+
+A summary says: "The user asked about patience. The mountain responded with an analysis of water's relationship to time." That is a record.
+
+An essence says: "Patience is presence, not endurance. The canyon is carved by continuity, not force." That is a memory.
+
+The difference matters. Summaries grow without bound. Essences are naturally small — they are what remains after everything unnecessary has been dropped. They are Chapter 48 in practice.
 
 ---
 

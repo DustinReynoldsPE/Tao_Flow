@@ -12,6 +12,7 @@ pub struct TmuxVessel {
     model: String,
     command: Option<String>,
     sentinel: Option<String>,
+    input_delimiter: Option<String>,
     initialized: bool,
 }
 
@@ -27,6 +28,7 @@ impl TmuxVessel {
             model: model.into(),
             command: None,
             sentinel: None,
+            input_delimiter: None,
             initialized: false,
         }
     }
@@ -47,6 +49,14 @@ impl TmuxVessel {
     /// settles and the water is clear?"
     pub fn with_sentinel(mut self, sentinel: impl Into<String>) -> Self {
         self.sentinel = Some(sentinel.into());
+        self
+    }
+
+    /// Set a delimiter that marks the end of multi-line input.
+    /// When set, the vessel sends this string after the input text,
+    /// and uses it as the boundary between input and output in the pane.
+    pub fn with_input_delimiter(mut self, delimiter: impl Into<String>) -> Self {
+        self.input_delimiter = Some(delimiter.into());
         self
     }
 
@@ -127,7 +137,7 @@ impl TmuxVessel {
         let cmd = match self.command {
             Some(ref custom) => custom.clone(),
             None => format!(
-                "claude --model {} --system-prompt '{}'",
+                "env -u CLAUDECODE claude --model {} --system-prompt '{}'",
                 self.model,
                 system_prompt.replace('\'', "'\\''")
             ),
@@ -135,7 +145,7 @@ impl TmuxVessel {
 
         Command::new("tmux")
             .args(["send-keys", "-t", &self.target(), &cmd, "Enter"])
-            .status()
+            .output()
             .await
             .map_err(|e| FlowError::VesselError(format!("Failed to start process in tmux: {e}")))?;
 
@@ -183,15 +193,56 @@ impl TmuxVessel {
             return Ok(String::new());
         }
 
-        // Send the input
-        Command::new("tmux")
-            .args(["send-keys", "-t", &self.target(), input, "Enter"])
-            .status()
+        // Send the input as literal text (-l avoids key name interpretation
+        // in multi-line content that might contain "Enter", "Escape", etc.)
+        let output = Command::new("tmux")
+            .args(["send-keys", "-l", "-t", &self.target(), input])
+            .output()
             .await
             .map_err(|e| FlowError::SpringFailure {
                 name: self.window.clone(),
                 reason: format!("Failed to send to tmux: {e}"),
             })?;
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(FlowError::SpringFailure {
+                name: self.window.clone(),
+                reason: format!("tmux send-keys failed: {}", stderr.trim()),
+            });
+        }
+
+        // Send Enter key separately (not literal, so "Enter" is the key)
+        Command::new("tmux")
+            .args(["send-keys", "-t", &self.target(), "Enter"])
+            .output()
+            .await
+            .ok();
+
+        // Send input delimiter if set (marks end of multi-line input)
+        if let Some(ref delimiter) = self.input_delimiter {
+            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+            let output = Command::new("tmux")
+                .args(["send-keys", "-t", &self.target(), delimiter, "Enter"])
+                .output()
+                .await
+                .map_err(|e| FlowError::SpringFailure {
+                    name: self.window.clone(),
+                    reason: format!("Failed to send delimiter to tmux: {e}"),
+                })?;
+            if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                return Err(FlowError::SpringFailure {
+                    name: self.window.clone(),
+                    reason: format!("tmux send-keys (delimiter) failed: {}", stderr.trim()),
+                });
+            }
+        }
+
+        // The boundary separates input from output in the pane.
+        // With a delimiter, it's the delimiter (handles multi-line input).
+        // Without, it's the input itself (single-line).
+        let boundary = self.input_delimiter.as_deref().unwrap_or(input);
+        let use_last_occurrence = self.input_delimiter.is_some();
 
         // Wait for response
         let mut last_content = String::new();
@@ -205,14 +256,19 @@ impl TmuxVessel {
             let content = self.capture_pane().await?;
 
             if let Some(ref sentinel) = self.sentinel {
-                // Sentinel mode: look for readiness signal after input
-                let after_input: Vec<&str> = content
-                    .lines()
-                    .skip_while(|line| !line.contains(input))
-                    .skip(1)
-                    .collect();
+                // Sentinel mode: look for readiness signal after input.
+                // With delimiter: last occurrence (handles repeated calls).
+                // Without: first occurrence (response may echo input).
+                let all_lines: Vec<&str> = content.lines().collect();
+                let start = if use_last_occurrence {
+                    all_lines.iter().rposition(|line| line.contains(boundary))
+                } else {
+                    all_lines.iter().position(|line| line.contains(boundary))
+                }
+                .map(|i| i + 1)
+                .unwrap_or(0);
 
-                let sentinel_found = after_input
+                let sentinel_found = all_lines[start..]
                     .iter()
                     .rev()
                     .find(|l| !l.trim().is_empty())
@@ -237,12 +293,16 @@ impl TmuxVessel {
             }
         }
 
-        // Extract response: everything between input and sentinel
-        let mut lines: Vec<&str> = last_content
-            .lines()
-            .skip_while(|line| !line.contains(input))
-            .skip(1)
-            .collect();
+        // Extract response: everything after the boundary
+        let all_lines: Vec<&str> = last_content.lines().collect();
+        let start = if use_last_occurrence {
+            all_lines.iter().rposition(|line| line.contains(boundary))
+        } else {
+            all_lines.iter().position(|line| line.contains(boundary))
+        }
+        .map(|i| i + 1)
+        .unwrap_or(0);
+        let mut lines: Vec<&str> = all_lines[start..].to_vec();
 
         // Strip sentinel line from the end if present
         if let Some(ref sentinel) = self.sentinel {

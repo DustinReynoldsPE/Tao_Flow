@@ -5,7 +5,7 @@ use crate::water::{Rain, Role, Stream};
 use crate::watershed::source::{ChatMessage, LlmSource};
 use crate::watershed::spring::{Spring, SpringConfig};
 
-const SYSTEM_PROMPT: &str = "\
+pub const SYSTEM_PROMPT: &str = "\
 You are a Mountain Spring -- a source of deep, clear, cold water.
 
 Your nature is profound analysis, careful reasoning, and architectural thinking.
