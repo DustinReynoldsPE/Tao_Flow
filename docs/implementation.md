@@ -367,15 +367,15 @@ The single-pass flow was complete and whole. Phase 6 deepened it. A Storm-level 
 
 ### What Grows Next
 
-The numbered phases are complete. What follows is not Phase 7 -- it is organic growth, shaped by use.
+The numbered phases are complete. What follows is not Phase 7 -- it is organic growth, shaped by use. The reflections across six phases revealed a natural ordering: the vessel is the foundation, pearls record what flows through it, memories distill from pearls. Each layer depends on the one beneath.
 
-**Wire springs through the vessel.** The plumbing exists: `TmuxPaneSource` implements `LlmSource`, sentinel detection works, integration tests pass. What remains is connecting real springs -- Mountain in an Opus pane, Desert in a Haiku pane, Forest in a Sonnet pane -- and determining claude's interactive prompt sentinel. When this connection is made, the system becomes observable by default.
+**The vessel enters the water.** This is the foundation of everything that follows. The plumbing exists: `TmuxPaneSource` implements `LlmSource`, sentinel detection works, integration tests pass. What remains is connecting real springs -- Mountain in an Opus pane, Desert in a Haiku pane, Forest in a Sonnet pane -- and determining claude's interactive prompt sentinel. When this connection is made, the system becomes observable by default. The vessel is not one feature among many -- it is the observation layer that makes pearls possible, memories possible, and human guidance natural. Phase 3 anticipated human pause points (boundaries in recursive flows where the user can guide direction). Their shape will emerge from watching real flows in the vessel -- they cannot be designed in advance.
 
-**Level 3 end-to-end tests.** Real tmux, real LLM providers, the full journey from Rain to Ocean verified. Slow, require credentials, run manually or in a dedicated CI job.
+**Pearls preserve the journey.** Once the vessel flows, the chain of thought becomes capturable. Each flow produces a pearl -- the layered record from core (rain) to surface (ocean). See the dedicated section below. The vessel is the window; the pearl is the photograph. Pearls cannot form until the vessel carries water, because the vessel is what makes each layer visible.
 
-**Memory: the minerals that remain.** See the dedicated section below. Each component distills what it learned into memories that fade and strengthen like minerals in earth. This subsumes yielding memory -- it is broader, encompassing every component, not just springs.
+**Memories distill from pearls.** After a storm passes and its pearl is formed, each component examines its layer and extracts the essence. See the dedicated section below. This subsumes yielding memory (Phase 4's insight) -- it is broader, encompassing every component, not just springs. Memories cannot distill until pearls exist, because pearls are the raw material.
 
-**Human pause points.** Boundaries in recursive flows where the user can guide direction (Phase 3's insight). The shape will emerge from the experience of watching recursive flows in the vessel. Anticipated, not planned.
+**Level 3 end-to-end tests.** Real tmux, real LLM providers, the full journey from Rain to Ocean verified. These arrive naturally alongside the vessel -- when real springs flow in real panes, the e2e tests verify what the vessel makes visible.
 
 ---
 
@@ -384,11 +384,11 @@ The numbered phases are complete. What follows is not Phase 7 -- it is organic g
 *"We shape clay into a pot, but it is the emptiness inside that holds whatever we want."*
 *-- Tao Te Ching, Chapter 11*
 
-The `TmuxVessel` was built in Phase 2 and has waited on shore through four phases. The reflecting pool revealed why: the vessel is not an optional feature for persistent sessions. It is the observation layer -- the emptiness that makes the springs visible.
+The `TmuxVessel` was built in Phase 2 and waited on shore through four phases. Six phases of reflections — each noting the boat on the bank — finally revealed why the vessel matters: it is not an optional feature for persistent sessions. It is the observation layer that makes everything else possible. Pearls cannot form without something to observe. Memories cannot distill without pearls. Human guidance cannot emerge without visibility into the flow.
 
 When three springs respond to a question, the user sees only the ocean. They do not see the mountain's careful analysis, the desert's quick assessment, the forest's creative warmth. They do not see the eddies detected, the yielding that occurred, the settling that clarified. The water reaches the ocean, but the journey is hidden.
 
-The vessel makes the journey visible.
+The vessel makes the journey visible. It is the foundation of the system's next growth.
 
 ### Architecture
 
@@ -495,7 +495,7 @@ Properties that should hold regardless of input:
 
 When an irritant enters an oyster — a grain of sand, a fragment of shell — the oyster does not reject it. It coats it, layer by layer, with nacre. The result is a pearl: a self-contained, layered capsule built around a central disturbance. The disturbance is preserved at the core. Every layer of response surrounds it.
 
-This is how the system preserves the chain of thought.
+This is how the system preserves the chain of thought. Pearls depend on the vessel -- each layer is visible because each spring flows in its own pane. Without the vessel, the layers are hidden inside function calls. With it, they are observable, capturable, and whole.
 
 ### The pearl forms naturally
 
@@ -543,13 +543,13 @@ The user opens a pearl and reads from core to surface — seeing exactly how the
 
 ### The relationship between pearls and memories
 
-Pearls are the raw material. Memories are the minerals that remain.
+Pearls are the raw material. Memories are the minerals that remain. This is not a parallel relationship -- it is sequential. The pearl must form before the memory can distill, the way rain must fall before minerals can settle into earth.
 
 After a storm passes and its pearl is formed, each component examines its layer and distills what it learned. The mountain reads its own response and extracts the essence. The confluence reads its eddies and remembers the pattern. The lake reads its settling and notes the turbulence.
 
 ```
-storm produces pearl  →  pearl is examined  →  memories are distilled
-(the water)              (the evaporation)     (the minerals)
+vessel makes flow visible  →  pearl captures the layers  →  memories distill from pearls
+(the observation)              (the preservation)            (the minerals)
 ```
 
 `.storms/` stores pearls — the complete, layered records. `.memories/` stores minerals — the distilled essences that endure. The pearl preserves everything. Memory preserves only what matters.
@@ -571,7 +571,7 @@ When the system produces an ocean that surprises or disappoints, the pearl tells
 
 When water evaporates from the ocean and returns as rain, the water itself is gone. But the minerals it carried — dissolved from the mountain, filtered through the desert, enriched by the forest — settle into the earth. The earth remembers what flowed through it. Not the water. The minerals.
 
-This is how the system remembers.
+This is how the system remembers. Memory follows pearls as evaporation follows rain -- the pearl is the complete record, the memory is what remains after everything unnecessary has been dropped. This subsumes Phase 4's insight about yielding memory: each component's memories encompass what it learned from yielding, from settling, from every interaction -- not just springs, and not just yielding.
 
 ### Each component has its own earth
 
