@@ -4,5 +4,6 @@
 //! which you see the mountain. Springs ride in vessels.
 
 pub mod tmux;
+pub mod wiring;
 
 pub use tmux::TmuxVessel;
