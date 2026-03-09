@@ -488,6 +488,82 @@ Properties that should hold regardless of input:
 
 ---
 
+## Pearls: The Chain of Thought Preserved
+
+*"The Tao is like a well: used but never used up. It is like the eternal void: filled with infinite possibilities."*
+*-- Tao Te Ching, Chapter 4*
+
+When an irritant enters an oyster — a grain of sand, a fragment of shell — the oyster does not reject it. It coats it, layer by layer, with nacre. The result is a pearl: a self-contained, layered capsule built around a central disturbance. The disturbance is preserved at the core. Every layer of response surrounds it.
+
+This is how the system preserves the chain of thought.
+
+### The pearl forms naturally
+
+Every flow through the system — from rain to ocean — produces a pearl. The pearl is not a log. It is not a transcript. It is the layered record of how the system transformed a question into understanding.
+
+```
+.storms/
+  2024-03-08-patience-and-persistence.pearl
+  2024-03-08-what-is-the-tao.pearl
+  2024-03-09-taoism-vs-stoicism.pearl
+```
+
+Each pearl contains every layer of the journey, from core to surface:
+
+```
+Pearl
+  │
+  ├── Core: the original query (rain)
+  │     "How does water teach us about patience and persistence?"
+  │
+  ├── Layer 1: Spring responses (streams)
+  │     Mountain: "Water does not try to be patient..."
+  │     Desert:   "Water teaches patience through its nature..."
+  │
+  ├── Layer 2: Eddy detection (where perspectives diverged)
+  │     EDDY|Interpretive|persistence-mechanism|...
+  │     EDDY|Structural|narrative-arc|...
+  │
+  ├── Layer 3: Yielding (how divergences resolved)
+  │     persistence-mechanism: "Both paths are flow..."
+  │     narrative-arc: "Present as distinct names for one force..."
+  │
+  ├── Layer 4: Merging (the river woven from streams)
+  │     "Water does not try to be patient. That is its deepest teaching..."
+  │
+  ├── Layer 5: Settling (the lake clarifies)
+  │     clarity: 0.65, depth: Deep
+  │     "The response was refined for wholeness and simplicity..."
+  │
+  └── Surface: the ocean (what the user received)
+        "Water does not try to be patient..."
+```
+
+The user opens a pearl and reads from core to surface — seeing exactly how their question was transformed at each stage. Or they read from surface to core — starting with the final answer and drilling into the reasoning that produced it.
+
+### The relationship between pearls and memories
+
+Pearls are the raw material. Memories are the minerals that remain.
+
+After a storm passes and its pearl is formed, each component examines its layer and distills what it learned. The mountain reads its own response and extracts the essence. The confluence reads its eddies and remembers the pattern. The lake reads its settling and notes the turbulence.
+
+```
+storm produces pearl  →  pearl is examined  →  memories are distilled
+(the water)              (the evaporation)     (the minerals)
+```
+
+`.storms/` stores pearls — the complete, layered records. `.memories/` stores minerals — the distilled essences that endure. The pearl preserves everything. Memory preserves only what matters.
+
+Over time, pearls accumulate. Old pearls may be archived or pruned. But the memories they produced endure — fading slowly, reinforced by new storms that touch the same ground.
+
+### What the pearl reveals
+
+The pearl is transparency made permanent. The vessel makes the flow visible in real time — the user watches the springs respond, the eddies form, the river weave. The pearl preserves that visibility after the flow is done. The vessel is the window. The pearl is the photograph.
+
+When the system produces an ocean that surprises or disappoints, the pearl tells the story: which spring saw what, where the eddies formed, how yielding resolved them, what the lake settled. The chain of thought is not hidden. It is layered, readable, and whole.
+
+---
+
 ## Memory: The Minerals That Remain
 
 *"Return is the movement of the Tao. Yielding is the way of the Tao."*
