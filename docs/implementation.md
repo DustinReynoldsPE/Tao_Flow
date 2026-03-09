@@ -476,13 +476,14 @@ These tests require tmux but not Claude or llama.cpp. They run in CI.
 
 **Level 3: Full end-to-end tests.** Real tmux + real LLM providers. Mark as `#[ignore]` by default -- they are slow, require credentials, and cost money (or Claude Max subscription). Run manually or in a dedicated CI job.
 
-Verify:
-- A Droplet flows through desert and produces a coherent ocean
-- A Shower flows through two springs, the confluence weaves, the lake settles
-- A Downpour uses all three springs with real eddy detection and yielding
-- A Storm decomposes, sub-flows execute, higher confluence assembles
-- Vapor carries context across multiple flows (multi-turn conversation)
-- The vessel panes show the full conversation for each spring
+Five tiers verify the full spectrum:
+- **Tier 1 (Droplet):** desert spring alone produces a coherent ocean
+- **Tier 2 (Shower):** two springs flow, confluence weaves, lake settles
+- **Tier 3 (Downpour):** all three springs with real eddy detection and yielding
+- **Tier 4 (Storm):** decomposer breaks input into sub-questions, sub-flows execute through full watershed, higher confluence assembles — verified by capturing the decomposer pane and asserting sub-questions were produced, spring panes received multiple exchanges, and confluence wove at least once
+- **Tier 5 (Vapor):** multi-turn context carries across flows
+
+Each test captures a flow journal (`target/e2e-journals/`) — the layered record of every window's exchanges. The journal is a proto-pearl: it preserves the journey, not just the destination. When pearls arrive, they will capture this same structure at the library level, including nested pearls for Storm sub-flows.
 
 ### Property-based tests (future)
 

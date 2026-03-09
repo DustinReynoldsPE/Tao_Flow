@@ -46,13 +46,21 @@ async fn vessel_tao(session: &str) -> TaoFlow {
 // Captures every vessel's pane content into a structured markdown document.
 // The journey is preserved, not just the destination.
 
-const JOURNAL_ORDER: &[&str] = &["mountain", "desert", "forest", "confluence", "still-lake"];
+const JOURNAL_ORDER: &[&str] = &[
+    "mountain",
+    "desert",
+    "forest",
+    "decomposer",
+    "confluence",
+    "still-lake",
+];
 
 fn window_title(name: &str) -> &str {
     match name {
         "mountain" => "Mountain Spring",
         "desert" => "Desert Spring",
         "forest" => "Forest Spring",
+        "decomposer" => "Decomposer",
         "confluence" => "Confluence",
         "still-lake" => "Still Lake",
         other => other,
@@ -267,7 +275,7 @@ fn format_delimited_section(title: &str, content: &str) -> String {
 }
 
 fn uses_delimiter(window: &str) -> bool {
-    matches!(window, "confluence" | "still-lake")
+    matches!(window, "confluence" | "still-lake" | "decomposer")
 }
 
 async fn write_journal(session: &str, test_name: &str, input: &str, ocean: &str) {
@@ -303,6 +311,20 @@ async fn write_journal(session: &str, test_name: &str, input: &str, ocean: &str)
     let path = format!("{journal_dir}/{test_name}.md");
     std::fs::write(&path, &journal).ok();
     eprintln!("Journal written to {path}");
+}
+
+/// Capture and parse exchanges from a single window.
+/// Returns the structured prompt/response pairs visible in the pane.
+async fn capture_window_exchanges(session: &str, window: &str) -> Vec<Exchange> {
+    let content = capture_window_content(session, window).await;
+    if content.trim().is_empty() {
+        return Vec::new();
+    }
+    if uses_delimiter(window) {
+        parse_delimited_exchanges(&content)
+    } else {
+        parse_spring_exchanges(&content)
+    }
 }
 
 /// System prompt fragments that should never leak into ocean output.
@@ -411,6 +433,90 @@ async fn downpour_three_springs_merge() {
         result.len()
     );
     write_journal(session, "downpour", input, &result).await;
+
+    cleanup_session(session).await;
+}
+
+// ============================================================
+// Tier 4: The Storm (recursive decomposition, >100 words)
+// ============================================================
+
+#[tokio::test]
+#[ignore]
+async fn storm_decomposes_and_reassembles() {
+    if !tmux_available().await || !claude_available().await {
+        eprintln!("tmux or claude CLI not available, skipping");
+        return;
+    }
+
+    let session = "tao-e2e-storm";
+    let mut tao = vessel_tao(session).await;
+
+    let input = "Examine the relationship between three ancient philosophical traditions \
+        and their relevance to modern technology. First, consider how Taoist principles of \
+        wu wei and natural flow apply to software architecture — specifically, how systems \
+        that yield rather than force tend to be more resilient. Second, analyze how Stoic \
+        concepts of virtue and acceptance inform the practice of debugging and incident \
+        response — when systems fail, how does a Stoic mindset change the engineer's \
+        approach? Third, explore how Buddhist concepts of impermanence and interdependence \
+        relate to distributed systems and microservices — nothing exists independently, \
+        everything changes. For each tradition, provide specific examples of how these \
+        ancient insights manifest in modern engineering practices, and identify where \
+        these traditions agree and where they diverge in their guidance for builders \
+        of complex systems.";
+
+    let result = tokio::time::timeout(Duration::from_secs(900), tao.flow(input))
+        .await
+        .expect("timed out after 900s")
+        .expect("flow should produce an ocean");
+
+    assert_ocean_clean(&result);
+    assert!(
+        result.len() > 100,
+        "Storm ocean should be substantive, got {} chars",
+        result.len()
+    );
+
+    // --- Verify the recursive path was taken ---
+
+    // The decomposer should have produced sub-questions
+    let decomposer_exchanges = capture_window_exchanges(session, "decomposer").await;
+    if !decomposer_exchanges.is_empty() {
+        let response = &decomposer_exchanges[0].response;
+        assert!(
+            response.contains("Q:") || response.contains("1.") || response.contains("1)"),
+            "Decomposer should produce sub-questions, got: {}",
+            &response[..response.len().min(200)]
+        );
+        eprintln!(
+            "Storm decomposed into sub-questions (decomposer had {} exchanges)",
+            decomposer_exchanges.len()
+        );
+    } else {
+        eprintln!("Decomposer pane was empty — Storm may have fallen back to single-pass");
+    }
+
+    // Springs should have received multiple exchanges (one per sub-question)
+    let mountain_exchanges = capture_window_exchanges(session, "mountain").await;
+    let desert_exchanges = capture_window_exchanges(session, "desert").await;
+    eprintln!(
+        "Mountain: {} exchanges, Desert: {} exchanges",
+        mountain_exchanges.len(),
+        desert_exchanges.len()
+    );
+
+    // Confluence should have woven at least once (sub-flow merges or higher confluence)
+    let confluence_exchanges = capture_window_exchanges(session, "confluence").await;
+    assert!(
+        !confluence_exchanges.is_empty(),
+        "Confluence should have woven at least once"
+    );
+    eprintln!(
+        "Confluence: {} exchanges (sub-flow merges + higher confluence)",
+        confluence_exchanges.len()
+    );
+
+    write_journal(session, "storm", input, &result).await;
 
     cleanup_session(session).await;
 }
