@@ -126,53 +126,11 @@ impl TaoFlow {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_springs;
     use crate::watershed::source::mock::{DrySource, MockSource};
     use crate::watershed::spring::SpringConfig;
-    use crate::watershed::{DesertSpring, ForestSpring, MountainSpring};
+    use crate::watershed::MountainSpring;
     use std::collections::HashMap;
-
-    fn mountain_spring(response: &str) -> Box<dyn crate::watershed::Spring> {
-        let mut affinities = HashMap::new();
-        affinities.insert("philosophy".into(), 0.9);
-        let config = SpringConfig {
-            name: "mountain".into(),
-            nature: "deep reasoning".into(),
-            affinities,
-        };
-        Box::new(MountainSpring::new(
-            config,
-            Box::new(MockSource::new(response)),
-        ))
-    }
-
-    fn desert_spring(response: &str) -> Box<dyn crate::watershed::Spring> {
-        let mut affinities = HashMap::new();
-        affinities.insert("quick_answers".into(), 0.9);
-        let config = SpringConfig {
-            name: "desert".into(),
-            nature: "speed, efficiency".into(),
-            affinities,
-        };
-        Box::new(DesertSpring::new(
-            config,
-            Box::new(MockSource::new(response)),
-        ))
-    }
-
-    fn forest_spring(response: &str) -> Box<dyn crate::watershed::Spring> {
-        let mut affinities = HashMap::new();
-        affinities.insert("narrative".into(), 0.9);
-        affinities.insert("empathy".into(), 0.8);
-        let config = SpringConfig {
-            name: "forest".into(),
-            nature: "creativity, narrative, empathy".into(),
-            affinities,
-        };
-        Box::new(ForestSpring::new(
-            config,
-            Box::new(MockSource::new(response)),
-        ))
-    }
 
     fn test_confluence(response: &str) -> ConfluencePool {
         ConfluencePool::new(Box::new(MockSource::new(response)))
@@ -191,8 +149,8 @@ mod tests {
     #[tokio::test]
     async fn rain_flows_to_ocean() {
         let watershed = Watershed::new(vec![
-            mountain_spring("The Tao is the way."),
-            desert_spring("It's the way."),
+            test_springs::mountain("The Tao is the way."),
+            test_springs::desert("It's the way."),
         ]);
         let confluence = test_confluence("The Tao is the way.");
         let lake = test_lake("The Tao is the way, settled.");
@@ -204,8 +162,8 @@ mod tests {
     #[tokio::test]
     async fn droplet_uses_only_desert() {
         let watershed = Watershed::new(vec![
-            mountain_spring("Should not appear."),
-            desert_spring("Hello!"),
+            test_springs::mountain("Should not appear."),
+            test_springs::desert("Hello!"),
         ]);
         // Single stream: clarity 1.0, lake does nothing (wu wei)
         let confluence = test_confluence("unused");
@@ -218,9 +176,9 @@ mod tests {
     #[tokio::test]
     async fn three_springs_merge_and_settle() {
         let watershed = Watershed::new(vec![
-            mountain_spring("Deep analysis of the question."),
-            desert_spring("Quick, direct answer."),
-            forest_spring("A story about the answer."),
+            test_springs::mountain("Deep analysis of the question."),
+            test_springs::desert("Quick, direct answer."),
+            test_springs::forest("A story about the answer."),
         ]);
         // MockSource returns same response for all calls (detection, weaving, settling)
         let woven = "A woven response from three perspectives.";
@@ -238,7 +196,7 @@ mod tests {
 
     #[tokio::test]
     async fn vapor_accumulates_across_flows() {
-        let watershed = Watershed::new(vec![desert_spring("Response.")]);
+        let watershed = Watershed::new(vec![test_springs::desert("Response.")]);
         let confluence = test_confluence("unused");
         let lake = test_lake("should not be called");
         let mut tao = TaoFlow::new(watershed, confluence, lake);
@@ -273,8 +231,8 @@ mod tests {
     #[tokio::test]
     async fn storm_with_decomposer_flows() {
         let watershed = Watershed::new(vec![
-            mountain_spring("Mountain's wisdom on the sub-topic."),
-            desert_spring("Desert's speed on the sub-topic."),
+            test_springs::mountain("Mountain's wisdom on the sub-topic."),
+            test_springs::desert("Desert's speed on the sub-topic."),
         ]);
         let confluence = test_confluence("Woven response.");
         let lake = test_lake("Settled response.");
@@ -293,8 +251,8 @@ mod tests {
     #[tokio::test]
     async fn storm_without_decomposer_single_passes() {
         let watershed = Watershed::new(vec![
-            mountain_spring("Mountain's response."),
-            desert_spring("Desert's response."),
+            test_springs::mountain("Mountain's response."),
+            test_springs::desert("Desert's response."),
         ]);
         let confluence = test_confluence("Woven.");
         let lake = test_lake("Settled.");
@@ -307,8 +265,10 @@ mod tests {
 
     #[tokio::test]
     async fn decomposition_failure_falls_back_to_single_pass() {
-        let watershed =
-            Watershed::new(vec![mountain_spring("Mountain."), desert_spring("Desert.")]);
+        let watershed = Watershed::new(vec![
+            test_springs::mountain("Mountain."),
+            test_springs::desert("Desert."),
+        ]);
         let confluence = test_confluence("Woven.");
         let lake = test_lake("Settled.");
         // DrySource causes decomposition to fail
@@ -325,8 +285,8 @@ mod tests {
     #[tokio::test]
     async fn vapor_updated_once_after_recursive_flow() {
         let watershed = Watershed::new(vec![
-            mountain_spring("Response."),
-            desert_spring("Response."),
+            test_springs::mountain("Response."),
+            test_springs::desert("Response."),
         ]);
         let confluence = test_confluence("Woven.");
         let lake = test_lake("Settled.");
@@ -345,7 +305,7 @@ mod tests {
 
     #[tokio::test]
     async fn non_storm_ignores_decomposer() {
-        let watershed = Watershed::new(vec![desert_spring("Quick.")]);
+        let watershed = Watershed::new(vec![test_springs::desert("Quick.")]);
         let confluence = test_confluence("unused");
         let lake = test_lake("unused");
         // Decomposer would fail if called (single question = error)
@@ -361,8 +321,8 @@ mod tests {
     #[tokio::test]
     async fn max_depth_prevents_infinite_recursion() {
         let watershed = Watershed::new(vec![
-            mountain_spring("Response."),
-            desert_spring("Response."),
+            test_springs::mountain("Response."),
+            test_springs::desert("Response."),
         ]);
         let confluence = test_confluence("Woven.");
         let lake = test_lake("Settled.");

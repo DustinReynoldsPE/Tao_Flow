@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 
-use crate::confluence::ConfluencePool;
+use crate::confluence::{ConfluencePool, Decomposer};
 use crate::error::FlowError;
 use crate::flow::TaoFlow;
 use crate::still_lake::StillLake;
@@ -44,17 +44,17 @@ impl VesselConfig {
     }
 }
 
-/// Wraps TmuxPaneSource to embed system prompts into messages.
+/// Wraps TmuxPaneSource so the system prompt travels with each message.
 ///
 /// Confluence and Still Lake change system prompts between calls
-/// (detect, yield, weave), so the prompt travels with the message
-/// rather than being baked into the wrapper script.
-struct EmbeddingVesselSource {
+/// (detect, yield, weave), so the prompt cannot be baked into the
+/// wrapper script. Instead, it is prepended to the user message.
+struct SystemPromptSource {
     inner: TmuxPaneSource,
 }
 
 #[async_trait]
-impl LlmSource for EmbeddingVesselSource {
+impl LlmSource for SystemPromptSource {
     async fn complete(&self, system: &str, messages: &[ChatMessage]) -> Result<String, FlowError> {
         let last_content = messages
             .iter()
@@ -187,7 +187,7 @@ fn vessel_confluence_source(config: &VesselConfig) -> Box<dyn LlmSource> {
         .with_command(format!("bash {script}"))
         .with_sentinel(SENTINEL)
         .with_input_delimiter(INPUT_DELIMITER);
-    Box::new(EmbeddingVesselSource {
+    Box::new(SystemPromptSource {
         inner: TmuxPaneSource::new(vessel),
     })
 }
@@ -199,7 +199,19 @@ fn vessel_lake_source(config: &VesselConfig) -> Box<dyn LlmSource> {
         .with_command(format!("bash {script}"))
         .with_sentinel(SENTINEL)
         .with_input_delimiter(INPUT_DELIMITER);
-    Box::new(EmbeddingVesselSource {
+    Box::new(SystemPromptSource {
+        inner: TmuxPaneSource::new(vessel),
+    })
+}
+
+fn vessel_decomposer_source(config: &VesselConfig) -> Box<dyn LlmSource> {
+    let script =
+        write_multiline_wrapper_script(&config.session, "decomposer", &config.utility_model);
+    let vessel = TmuxVessel::new(&config.session, "decomposer", &config.utility_model)
+        .with_command(format!("bash {script}"))
+        .with_sentinel(SENTINEL)
+        .with_input_delimiter(INPUT_DELIMITER);
+    Box::new(SystemPromptSource {
         inner: TmuxPaneSource::new(vessel),
     })
 }
@@ -241,4 +253,5 @@ pub async fn build_tao_flow(config: &VesselConfig) -> TaoFlow {
         ConfluencePool::new(vessel_confluence_source(config)),
         StillLake::new(vessel_lake_source(config)),
     )
+    .with_decomposer(Decomposer::new(vessel_decomposer_source(config)))
 }

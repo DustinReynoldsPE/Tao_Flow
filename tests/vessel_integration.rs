@@ -51,7 +51,7 @@ async fn vessel_creates_and_tears_down_session() {
     cleanup(session).await;
 
     let mut vessel = echo_vessel(session, "test");
-    vessel.prepare("unused").await.unwrap();
+    vessel.prepare().await.unwrap();
 
     assert!(
         session_exists(session).await,
@@ -76,7 +76,7 @@ async fn vessel_send_and_capture_with_cat() {
     cleanup(session).await;
 
     let mut vessel = echo_vessel(session, "echo");
-    vessel.prepare("unused").await.unwrap();
+    vessel.prepare().await.unwrap();
 
     let response = vessel.send("hello from the vessel").await.unwrap();
 
@@ -98,8 +98,8 @@ async fn vessel_prepare_is_idempotent() {
     cleanup(session).await;
 
     let mut vessel = echo_vessel(session, "test");
-    vessel.prepare("first").await.unwrap();
-    vessel.prepare("second").await.unwrap();
+    vessel.prepare().await.unwrap();
+    vessel.prepare().await.unwrap();
 
     let response = vessel.send("still working").await.unwrap();
     assert!(
@@ -120,7 +120,7 @@ async fn vessel_empty_input_returns_empty() {
     cleanup(session).await;
 
     let mut vessel = echo_vessel(session, "test");
-    vessel.prepare("unused").await.unwrap();
+    vessel.prepare().await.unwrap();
 
     let response = vessel.send("").await.unwrap();
     assert!(
@@ -141,10 +141,10 @@ async fn vessel_adds_window_to_existing_session() {
     cleanup(session).await;
 
     let mut mountain = echo_vessel(session, "mountain");
-    mountain.prepare("unused").await.unwrap();
+    mountain.prepare().await.unwrap();
 
     let mut desert = echo_vessel(session, "desert");
-    desert.prepare("unused").await.unwrap();
+    desert.prepare().await.unwrap();
 
     let m_response = mountain.send("deep thought").await.unwrap();
     let d_response = desert.send("quick answer").await.unwrap();
@@ -239,7 +239,7 @@ async fn vessel_sentinel_detection() {
     let mut vessel = TmuxVessel::new(session, "test", "unused")
         .with_command(cmd)
         .with_sentinel("ready>");
-    vessel.prepare("unused").await.unwrap();
+    vessel.prepare().await.unwrap();
 
     let response = vessel.send("test sentinel").await.unwrap();
     assert!(

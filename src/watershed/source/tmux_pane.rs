@@ -8,9 +8,9 @@ use crate::water::Role;
 
 /// An LlmSource backed by a persistent tmux pane.
 ///
-/// The vessel carries the conversation naturally. Each exchange
-/// lives in the pane's history. Only the latest message is sent;
-/// the pane remembers what came before.
+/// Each exchange is sent to the vessel's configured process.
+/// The system prompt is baked into the process command at
+/// construction time — it does not travel with each message.
 pub struct TmuxPaneSource {
     vessel: Mutex<TmuxVessel>,
 }
@@ -25,13 +25,10 @@ impl TmuxPaneSource {
 
 #[async_trait]
 impl LlmSource for TmuxPaneSource {
-    async fn complete(&self, system: &str, messages: &[ChatMessage]) -> Result<String, FlowError> {
+    async fn complete(&self, _system: &str, messages: &[ChatMessage]) -> Result<String, FlowError> {
         let mut vessel = self.vessel.lock().await;
 
-        // Lazy preparation: the vessel initializes on first use.
-        // The system prompt shapes the riverbed once; subsequent
-        // calls flow through the same channel.
-        vessel.prepare(system).await?;
+        vessel.prepare().await?;
 
         let last_user_message = messages
             .iter()

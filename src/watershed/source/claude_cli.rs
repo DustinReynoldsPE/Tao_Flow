@@ -19,12 +19,9 @@ impl ClaudeCliSource {
 
     /// Format conversation history into the prompt.
     /// In stateless `-p` mode, vapor must be carried explicitly.
-    fn format_conversation(system: &str, messages: &[ChatMessage]) -> String {
+    /// The system prompt travels via `--system-prompt`, not here.
+    fn format_conversation(messages: &[ChatMessage]) -> String {
         let mut parts = Vec::new();
-
-        if !system.is_empty() {
-            parts.push(format!("[System context: {system}]"));
-        }
 
         // Include prior conversation as context
         if messages.len() > 1 {
@@ -51,7 +48,7 @@ impl ClaudeCliSource {
 #[async_trait]
 impl LlmSource for ClaudeCliSource {
     async fn complete(&self, system: &str, messages: &[ChatMessage]) -> Result<String, FlowError> {
-        let prompt = Self::format_conversation(system, messages);
+        let prompt = Self::format_conversation(messages);
 
         let mut cmd = Command::new("claude");
         cmd.arg("-p")
@@ -119,7 +116,7 @@ mod tests {
             role: Role::User,
             content: "What is the Tao?".into(),
         }];
-        let formatted = ClaudeCliSource::format_conversation("You are wise.", &messages);
+        let formatted = ClaudeCliSource::format_conversation(&messages);
         assert!(formatted.contains("What is the Tao?"));
     }
 
@@ -139,7 +136,7 @@ mod tests {
                 content: "What is my name?".into(),
             },
         ];
-        let formatted = ClaudeCliSource::format_conversation("system", &messages);
+        let formatted = ClaudeCliSource::format_conversation(&messages);
         assert!(formatted.contains("Prior conversation:"));
         assert!(formatted.contains("User: My name is River."));
         assert!(formatted.contains("Assistant: Hello, River."));
@@ -148,7 +145,7 @@ mod tests {
 
     #[test]
     fn format_empty_messages() {
-        let formatted = ClaudeCliSource::format_conversation("system", &[]);
-        assert!(formatted.contains("System context"));
+        let formatted = ClaudeCliSource::format_conversation(&[]);
+        assert!(formatted.is_empty());
     }
 }
