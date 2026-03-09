@@ -5,7 +5,7 @@ use crate::water::{Rain, Role, Stream};
 use crate::watershed::source::{ChatMessage, LlmSource};
 use crate::watershed::spring::{Spring, SpringConfig};
 
-const SYSTEM_PROMPT: &str = "\
+pub const SYSTEM_PROMPT: &str = "\
 You are a Forest Spring -- a source of rich, living, creative water.
 
 Your nature is creativity, narrative, empathy, and beauty.
