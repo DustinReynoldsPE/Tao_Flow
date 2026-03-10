@@ -25,6 +25,19 @@ pub enum CliBackend {
     Claude,
     /// Crush (opencode): `crush run --model {provider/model} --quiet ...`
     Crush,
+    /// llama.cpp server: `curl` to the OpenAI-compatible API, parsed with `jq`.
+    /// Requires `jq` and a running `llama-server`.
+    Llama { base_url: String, model: String },
+}
+
+impl CliBackend {
+    /// Create a Llama backend targeting a running llama-server.
+    pub fn llama(base_url: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::Llama {
+            base_url: base_url.into(),
+            model: model.into(),
+        }
+    }
 }
 
 impl CliBackend {
@@ -43,6 +56,7 @@ impl CliBackend {
                 "anthropic/claude-sonnet-4-6",
                 "anthropic/claude-haiku-4-5-20251001",
             ),
+            Self::Llama { model, .. } => (model, model, model, model),
         }
     }
 
@@ -55,6 +69,8 @@ impl CliBackend {
             }),
             // Crush manages tools and MCP servers via crush.json.
             Self::Crush => ToolConfig::default(),
+            // llama.cpp has no tool use.
+            Self::Llama { .. } => ToolConfig::default(),
         }
     }
 
@@ -75,6 +91,8 @@ impl CliBackend {
             }
             // Crush manages tools via crush.json, not CLI flags.
             Self::Crush => String::new(),
+            // llama.cpp has no tool flags.
+            Self::Llama { .. } => String::new(),
         }
     }
 
@@ -96,6 +114,9 @@ impl CliBackend {
                 "crush run --model {model} --quiet{tool_flags} \
                  --system-prompt $'{escaped_system}'"
             ),
+            Self::Llama { base_url, .. } => format!(
+                r#"jq -Rs --arg s $'{escaped_system}' --arg m '{model}' '{{"model":$m,"messages":[{{"role":"system","content":$s}},{{"role":"user","content":.}}]}}' | curl -s {base_url}/v1/chat/completions -H 'Content-Type: application/json' -d @- | jq -r '.choices[0].message.content'"#
+            ),
         }
     }
 
@@ -111,6 +132,9 @@ impl CliBackend {
                 "crush run --model {model} --quiet{tool_flags} \
                  --system-prompt \"$system\""
             ),
+            Self::Llama { base_url, .. } => format!(
+                r#"jq -Rs --arg s "$system" --arg m '{model}' '{{"model":$m,"messages":[{{"role":"system","content":$s}},{{"role":"user","content":.}}]}}' | curl -s {base_url}/v1/chat/completions -H 'Content-Type: application/json' -d @- | jq -r '.choices[0].message.content'"#
+            ),
         }
     }
 
@@ -122,6 +146,9 @@ impl CliBackend {
                  --setting-sources ''{tool_flags}"
             ),
             Self::Crush => format!("crush run --model {model} --quiet{tool_flags}"),
+            Self::Llama { base_url, .. } => format!(
+                r#"jq -Rs --arg m '{model}' '{{"model":$m,"messages":[{{"role":"user","content":.}}]}}' | curl -s {base_url}/v1/chat/completions -H 'Content-Type: application/json' -d @- | jq -r '.choices[0].message.content'"#
+            ),
         }
     }
 }
@@ -191,14 +218,18 @@ impl VesselConfig {
 
     /// Create a config with a specific CLI backend.
     pub fn for_backend(session: impl Into<String>, backend: CliBackend) -> Self {
-        let (mountain, desert, forest, utility) = backend.default_models();
+        let (m, d, f, u) = backend.default_models();
+        let mountain_model: String = m.into();
+        let desert_model: String = d.into();
+        let forest_model: String = f.into();
+        let utility_model: String = u.into();
         let tools = backend.discover_tools();
         Self {
             session: session.into(),
-            mountain_model: mountain.into(),
-            desert_model: desert.into(),
-            forest_model: forest.into(),
-            utility_model: utility.into(),
+            mountain_model,
+            desert_model,
+            forest_model,
+            utility_model,
             default_tools: Some(tools),
             spring_tools: HashMap::new(),
             backend,
