@@ -55,12 +55,12 @@ TaoFlow configured with:
     Mountain → TmuxPaneSource (vessel: "tao-flow", pane: "mountain", model: opus)
     Desert   → TmuxPaneSource (vessel: "tao-flow", pane: "desert",   model: haiku)
     Forest   → TmuxPaneSource (vessel: "tao-flow", pane: "forest",  model: sonnet)
-    Confluence → ClaudeCliSource or TmuxPaneSource (weaving)
-    StillLake  → ClaudeCliSource or TmuxPaneSource (settling)
-    Decomposer → ClaudeCliSource (stateless, one-shot)
+    Confluence → TmuxPaneSource (weaving, multiline wrapper)
+    StillLake  → TmuxPaneSource (settling, multiline wrapper)
+    Decomposer → TmuxPaneSource (decomposition, multiline wrapper)
 ```
 
-Springs use persistent vessel panes. The confluence, lake, and decomposer may use either -- persistent panes for observability, or stateless CLI for simplicity. The wiring will teach what works.
+All components use persistent vessel panes. Confluence, lake, and decomposer use multiline wrapper scripts with `TAOFLOW_SYSTEM_END` to separate dynamic system prompts from user content.
 
 ### 3. Session Management for Tests
 
@@ -233,7 +233,7 @@ Wrap each test's flow in `tokio::time::timeout`. Generous limits:
 
 ### Cost
 
-For Claude Max users, the cost is zero -- subscription covers all CLI usage. For API-based sources (LlamaSource against a paid endpoint), each test costs real money. Run API-based e2e tests sparingly.
+For Claude Max users, the cost is zero -- subscription covers all CLI usage. For Llama backends, the cost is compute time on the local machine. Run e2e tests sparingly regardless -- they are slow and non-deterministic.
 
 ### Isolation
 

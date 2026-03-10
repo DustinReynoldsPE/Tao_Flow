@@ -16,6 +16,9 @@ pub enum FlowError {
 
     #[error("Vessel failed: {0}")]
     VesselFailure(String),
+
+    #[error("Configuration error: {0}")]
+    ConfigError(String),
 }
 
 #[cfg(test)]

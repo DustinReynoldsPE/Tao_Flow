@@ -1,5 +1,3 @@
-pub mod claude_cli;
-pub mod llama;
 pub mod tmux_pane;
 
 use async_trait::async_trait;

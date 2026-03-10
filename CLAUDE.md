@@ -30,9 +30,9 @@ cargo test --all-targets
 src/
   water/          # Core types: Vapor, Rain, Stream, River, Ocean
   watershed/      # Spring trait, VolumeSensor, MineralClassifier, spring implementations
-    source/       # LlmSource trait, ClaudeCliSource, LlamaSource
+    source/       # LlmSource trait, TmuxPaneSource
     springs/      # Mountain, Desert, Forest spring implementations
-  vessel/         # tmux session — the observable space where springs flow
+  vessel/         # tmux session, CLI backends, TOML config, system wiring
   confluence/     # Decomposition, eddy detection, yielding, stream merging
   still_lake/     # Final refinement (the five questions)
   flow.rs         # TaoFlow — single-pass and recursive Rain to Ocean journey

@@ -1,16 +1,16 @@
 use std::io::{self, Write};
 
-use tao_flow::vessel::wiring::{build_tao_flow, cleanup_session, VesselConfig};
-
-const SESSION: &str = "tao-flow";
+use tao_flow::vessel::config::load_config_or_default;
+use tao_flow::vessel::wiring::{build_tao_flow, cleanup_session};
 
 #[tokio::main]
 async fn main() {
-    let config = VesselConfig::new(SESSION);
+    let config = load_config_or_default();
+    let session = config.session.clone();
     let mut tao = build_tao_flow(&config).await;
 
-    eprintln!("Three springs flow in tmux session '{SESSION}'.");
-    eprintln!("  tmux attach -t {SESSION}");
+    eprintln!("Three springs flow in tmux session '{session}'.");
+    eprintln!("  tmux attach -t {session}");
     eprintln!();
 
     let stdin = io::stdin();
@@ -41,5 +41,5 @@ async fn main() {
         }
     }
 
-    cleanup_session(SESSION).await;
+    cleanup_session(&session).await;
 }

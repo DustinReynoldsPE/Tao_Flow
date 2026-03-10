@@ -19,29 +19,261 @@ pub const SENTINEL: &str = "TAOFLOW_READY";
 pub const INPUT_DELIMITER: &str = "TAOFLOW_INPUT_END";
 pub const SYSTEM_DELIMITER: &str = "TAOFLOW_SYSTEM_END";
 
-pub const DEFAULT_MOUNTAIN_MODEL: &str = "claude-sonnet-4-6";
-pub const DEFAULT_DESERT_MODEL: &str = "claude-haiku-4-5-20251001";
-pub const DEFAULT_FOREST_MODEL: &str = "claude-sonnet-4-6";
-pub const DEFAULT_UTILITY_MODEL: &str = "claude-haiku-4-5-20251001";
+/// The CLI tool backing each spring's LLM invocations.
+pub enum CliBackend {
+    /// Claude Code CLI: `claude -p --model {model} --system-prompt ...`
+    Claude,
+    /// Crush (opencode): `crush run --model {provider/model} --quiet ...`
+    Crush,
+    /// llama.cpp server: `curl` to the OpenAI-compatible API, parsed with `jq`.
+    /// Requires `jq` and a running `llama-server`.
+    Llama { base_url: String, model: String },
+}
+
+impl CliBackend {
+    /// Create a Llama backend targeting a running llama-server.
+    pub fn llama(base_url: impl Into<String>, model: impl Into<String>) -> Self {
+        Self::Llama {
+            base_url: base_url.into(),
+            model: model.into(),
+        }
+    }
+}
+
+impl CliBackend {
+    /// Default model IDs: (mountain, desert, forest, utility).
+    fn default_models(&self) -> (&str, &str, &str, &str) {
+        match self {
+            Self::Claude => (
+                "claude-sonnet-4-6",
+                "claude-haiku-4-5-20251001",
+                "claude-sonnet-4-6",
+                "claude-haiku-4-5-20251001",
+            ),
+            Self::Crush => (
+                "anthropic/claude-sonnet-4-6",
+                "anthropic/claude-haiku-4-5-20251001",
+                "anthropic/claude-sonnet-4-6",
+                "anthropic/claude-haiku-4-5-20251001",
+            ),
+            Self::Llama { model, .. } => (model, model, model, model),
+        }
+    }
+
+    /// Discover available tools and MCP servers for this backend.
+    fn discover_tools(&self) -> ToolConfig {
+        match self {
+            Self::Claude => discover_claude_context_mode().unwrap_or_else(|| ToolConfig {
+                allowed_tools: vec!["WebSearch".into(), "WebFetch".into()],
+                mcp_config: None,
+            }),
+            // Crush manages tools and MCP servers via crush.json.
+            Self::Crush => ToolConfig::default(),
+            // llama.cpp has no tool use.
+            Self::Llama { .. } => ToolConfig::default(),
+        }
+    }
+
+    /// Convert a ToolConfig into CLI flags for this backend.
+    fn tool_cli_flags(&self, config: &ToolConfig) -> String {
+        match self {
+            Self::Claude => {
+                let mut flags = String::new();
+                if !config.allowed_tools.is_empty() {
+                    let tools = config.allowed_tools.join(",");
+                    flags.push_str(&format!(" --allowedTools {tools}"));
+                }
+                if let Some(ref path) = config.mcp_config {
+                    let escaped = path.replace('"', "\\\"");
+                    flags.push_str(&format!(" --mcp-config \"{escaped}\""));
+                }
+                flags
+            }
+            // Crush manages tools via crush.json, not CLI flags.
+            Self::Crush => String::new(),
+            // llama.cpp has no tool flags.
+            Self::Llama { .. } => String::new(),
+        }
+    }
+
+    /// CLI invocation that reads from stdin with a baked-in system prompt.
+    /// The `escaped_system` should already be escaped for $'...' quoting.
+    fn piped_with_baked_system(
+        &self,
+        model: &str,
+        escaped_system: &str,
+        tool_flags: &str,
+    ) -> String {
+        match self {
+            Self::Claude => format!(
+                "env -u CLAUDECODE claude -p --model {model} \
+                 --setting-sources ''{tool_flags} \
+                 --system-prompt $'{escaped_system}'"
+            ),
+            Self::Crush => format!(
+                "crush run --model {model} --quiet{tool_flags} \
+                 --system-prompt $'{escaped_system}'"
+            ),
+            Self::Llama { base_url, .. } => format!(
+                r#"jq -Rs --arg s $'{escaped_system}' --arg m '{model}' '{{"model":$m,"messages":[{{"role":"system","content":$s}},{{"role":"user","content":.}}]}}' | curl -s {base_url}/v1/chat/completions -H 'Content-Type: application/json' -d @- | jq -r '.choices[0].message.content'"#
+            ),
+        }
+    }
+
+    /// CLI invocation that reads from stdin with a dynamic system prompt
+    /// from the shell variable `$system`.
+    fn piped_with_system_var(&self, model: &str, tool_flags: &str) -> String {
+        match self {
+            Self::Claude => format!(
+                "env -u CLAUDECODE claude -p --model {model} \
+                 --setting-sources ''{tool_flags} --system-prompt \"$system\""
+            ),
+            Self::Crush => format!(
+                "crush run --model {model} --quiet{tool_flags} \
+                 --system-prompt \"$system\""
+            ),
+            Self::Llama { base_url, .. } => format!(
+                r#"jq -Rs --arg s "$system" --arg m '{model}' '{{"model":$m,"messages":[{{"role":"system","content":$s}},{{"role":"user","content":.}}]}}' | curl -s {base_url}/v1/chat/completions -H 'Content-Type: application/json' -d @- | jq -r '.choices[0].message.content'"#
+            ),
+        }
+    }
+
+    /// CLI invocation that reads from stdin with no system prompt.
+    fn piped_bare(&self, model: &str, tool_flags: &str) -> String {
+        match self {
+            Self::Claude => format!(
+                "env -u CLAUDECODE claude -p --model {model} \
+                 --setting-sources ''{tool_flags}"
+            ),
+            Self::Crush => format!("crush run --model {model} --quiet{tool_flags}"),
+            Self::Llama { base_url, .. } => format!(
+                r#"jq -Rs --arg m '{model}' '{{"model":$m,"messages":[{{"role":"user","content":.}}]}}' | curl -s {base_url}/v1/chat/completions -H 'Content-Type: application/json' -d @- | jq -r '.choices[0].message.content'"#
+            ),
+        }
+    }
+}
+
+/// Tool configuration for a spring's CLI invocations.
+///
+/// Controls which tools and MCP servers are available.
+/// Interpretation depends on the CLI backend:
+/// - Claude: `allowed_tools` → `--allowedTools`, `mcp_config` → `--mcp-config`
+/// - Crush: tools and MCP are configured in `crush.json`
+#[derive(Clone, Default)]
+pub struct ToolConfig {
+    pub allowed_tools: Vec<String>,
+    pub mcp_config: Option<String>,
+}
+
+/// Discover context-mode MCP plugin for Claude and write a config file.
+///
+/// Searches the Claude plugin cache for context-mode, finds the latest
+/// version, and writes an MCP config to /tmp/ that claude -p can use.
+fn discover_claude_context_mode() -> Option<ToolConfig> {
+    let home = std::env::var("HOME").ok()?;
+    let plugin_base = std::path::PathBuf::from(&home)
+        .join(".claude/plugins/cache/claude-context-mode/context-mode");
+    let latest = std::fs::read_dir(&plugin_base)
+        .ok()?
+        .filter_map(|e| e.ok())
+        .max_by_key(|e| e.file_name())?;
+    let start_mjs = latest.path().join("start.mjs");
+    if !start_mjs.exists() {
+        return None;
+    }
+
+    let mcp_path = "/tmp/taoflow-mcp-config.json";
+    let mcp_json = format!(
+        r#"{{"mcpServers":{{"context-mode":{{"command":"node","args":["{}"]}}}}}}"#,
+        start_mjs.display()
+    );
+    std::fs::write(mcp_path, mcp_json).ok()?;
+
+    Some(ToolConfig {
+        allowed_tools: vec!["WebSearch".into(), "WebFetch".into()],
+        mcp_config: Some(mcp_path.into()),
+    })
+}
 
 /// Configuration for a vessel-backed TaoFlow session.
 pub struct VesselConfig {
     pub session: String,
+    pub backend: CliBackend,
     pub mountain_model: String,
     pub desert_model: String,
     pub forest_model: String,
     pub utility_model: String,
+    /// Tools available to all springs by default.
+    pub default_tools: Option<ToolConfig>,
+    /// Per-spring tool overrides, keyed by spring name
+    /// ("mountain", "desert", "forest", "confluence", "still-lake", "decomposer").
+    pub spring_tools: HashMap<String, ToolConfig>,
 }
 
 impl VesselConfig {
+    /// Create a config with the Claude backend.
     pub fn new(session: impl Into<String>) -> Self {
+        Self::for_backend(session, CliBackend::Claude)
+    }
+
+    /// Create a config with a specific CLI backend.
+    pub fn for_backend(session: impl Into<String>, backend: CliBackend) -> Self {
+        let (m, d, f, u) = backend.default_models();
+        let mountain_model: String = m.into();
+        let desert_model: String = d.into();
+        let forest_model: String = f.into();
+        let utility_model: String = u.into();
+        let tools = backend.discover_tools();
         Self {
             session: session.into(),
-            mountain_model: DEFAULT_MOUNTAIN_MODEL.into(),
-            desert_model: DEFAULT_DESERT_MODEL.into(),
-            forest_model: DEFAULT_FOREST_MODEL.into(),
-            utility_model: DEFAULT_UTILITY_MODEL.into(),
+            mountain_model,
+            desert_model,
+            forest_model,
+            utility_model,
+            default_tools: Some(tools),
+            spring_tools: HashMap::new(),
+            backend,
         }
+    }
+
+    pub fn with_mountain_model(mut self, model: impl Into<String>) -> Self {
+        self.mountain_model = model.into();
+        self
+    }
+
+    pub fn with_desert_model(mut self, model: impl Into<String>) -> Self {
+        self.desert_model = model.into();
+        self
+    }
+
+    pub fn with_forest_model(mut self, model: impl Into<String>) -> Self {
+        self.forest_model = model.into();
+        self
+    }
+
+    pub fn with_utility_model(mut self, model: impl Into<String>) -> Self {
+        self.utility_model = model.into();
+        self
+    }
+
+    pub fn with_default_tools(mut self, tools: ToolConfig) -> Self {
+        self.default_tools = Some(tools);
+        self
+    }
+
+    pub fn with_spring_tools(mut self, name: impl Into<String>, tools: ToolConfig) -> Self {
+        self.spring_tools.insert(name.into(), tools);
+        self
+    }
+
+    fn tools_for(&self, name: &str) -> Option<&ToolConfig> {
+        self.spring_tools.get(name).or(self.default_tools.as_ref())
+    }
+
+    fn tool_flags_for(&self, name: &str) -> String {
+        self.tools_for(name)
+            .map(|t| self.backend.tool_cli_flags(t))
+            .unwrap_or_default()
     }
 }
 
@@ -80,15 +312,21 @@ impl LlmSource for SystemPromptSource {
     }
 }
 
-/// Write a wrapper script that pipes single-line input through `claude -p`.
-fn write_wrapper_script(session: &str, name: &str, model: &str, system_prompt: &str) -> String {
+/// Write a wrapper script that pipes single-line input through the CLI backend.
+fn write_wrapper_script(
+    session: &str,
+    name: &str,
+    model: &str,
+    system_prompt: &str,
+    tool_flags: &str,
+    backend: &CliBackend,
+) -> String {
     let script_path = format!("/tmp/taoflow-{session}-{name}.sh");
     let escaped_prompt = system_prompt.replace('\'', "'\\''");
+    let invocation = backend.piped_with_baked_system(model, &escaped_prompt, tool_flags);
     let script = format!(
         "#!/bin/bash\ncd /tmp\nwhile IFS= read -r line; do\n  \
-         echo \"$line\" | env -u CLAUDECODE claude -p --model {model} \
-         --setting-sources '' \
-         --system-prompt $'{escaped_prompt}'\n  \
+         echo \"$line\" | {invocation}\n  \
          echo \"{SENTINEL}\"\ndone\n"
     );
     std::fs::write(&script_path, &script).expect("failed to write wrapper script");
@@ -109,8 +347,16 @@ fn write_wrapper_script(session: &str, name: &str, model: &str, system_prompt: &
 /// This avoids the pty buffer limit (~4096 bytes) that truncates large
 /// inputs sent via paste-buffer. Only the short file path travels
 /// through the pty; the content travels through the filesystem.
-fn write_multiline_wrapper_script(session: &str, name: &str, model: &str) -> String {
+fn write_multiline_wrapper_script(
+    session: &str,
+    name: &str,
+    model: &str,
+    tool_flags: &str,
+    backend: &CliBackend,
+) -> String {
     let script_path = format!("/tmp/taoflow-{session}-{name}.sh");
+    let invoke_with_system = backend.piped_with_system_var(model, tool_flags);
+    let invoke_bare = backend.piped_bare(model, tool_flags);
     let script = format!(
         r#"#!/bin/bash
 cd /tmp
@@ -140,9 +386,9 @@ while IFS= read -r filepath; do
   fi
   [ -z "$input" ] && continue
   if [ -n "$system" ]; then
-    echo "$input" | env -u CLAUDECODE claude -p --model {model} --setting-sources '' --system-prompt "$system"
+    echo "$input" | {invoke_with_system}
   else
-    echo "$input" | env -u CLAUDECODE claude -p --model {model} --setting-sources ''
+    echo "$input" | {invoke_bare}
   fi
   rm -f "$filepath"
   echo "{SENTINEL}"
@@ -159,7 +405,15 @@ fn vessel_source(
     model: &str,
     system_prompt: &str,
 ) -> Box<dyn LlmSource> {
-    let script = write_wrapper_script(&config.session, name, model, system_prompt);
+    let tool_flags = config.tool_flags_for(name);
+    let script = write_wrapper_script(
+        &config.session,
+        name,
+        model,
+        system_prompt,
+        &tool_flags,
+        &config.backend,
+    );
     let vessel = TmuxVessel::new(&config.session, name, model)
         .with_command(format!("bash {script}"))
         .with_sentinel(SENTINEL);
@@ -227,8 +481,14 @@ fn vessel_forest(config: &VesselConfig) -> Box<dyn Spring> {
 }
 
 fn vessel_confluence_source(config: &VesselConfig) -> Box<dyn LlmSource> {
-    let script =
-        write_multiline_wrapper_script(&config.session, "confluence", &config.utility_model);
+    let tool_flags = config.tool_flags_for("confluence");
+    let script = write_multiline_wrapper_script(
+        &config.session,
+        "confluence",
+        &config.utility_model,
+        &tool_flags,
+        &config.backend,
+    );
     let vessel = TmuxVessel::new(&config.session, "confluence", &config.utility_model)
         .with_command(format!("bash {script}"))
         .with_sentinel(SENTINEL)
@@ -239,8 +499,14 @@ fn vessel_confluence_source(config: &VesselConfig) -> Box<dyn LlmSource> {
 }
 
 fn vessel_lake_source(config: &VesselConfig) -> Box<dyn LlmSource> {
-    let script =
-        write_multiline_wrapper_script(&config.session, "still-lake", &config.utility_model);
+    let tool_flags = config.tool_flags_for("still-lake");
+    let script = write_multiline_wrapper_script(
+        &config.session,
+        "still-lake",
+        &config.utility_model,
+        &tool_flags,
+        &config.backend,
+    );
     let vessel = TmuxVessel::new(&config.session, "still-lake", &config.utility_model)
         .with_command(format!("bash {script}"))
         .with_sentinel(SENTINEL)
@@ -251,8 +517,14 @@ fn vessel_lake_source(config: &VesselConfig) -> Box<dyn LlmSource> {
 }
 
 fn vessel_decomposer_source(config: &VesselConfig) -> Box<dyn LlmSource> {
-    let script =
-        write_multiline_wrapper_script(&config.session, "decomposer", &config.utility_model);
+    let tool_flags = config.tool_flags_for("decomposer");
+    let script = write_multiline_wrapper_script(
+        &config.session,
+        "decomposer",
+        &config.utility_model,
+        &tool_flags,
+        &config.backend,
+    );
     let vessel = TmuxVessel::new(&config.session, "decomposer", &config.utility_model)
         .with_command(format!("bash {script}"))
         .with_sentinel(SENTINEL)
