@@ -4,8 +4,8 @@ use crate::error::FlowError;
 
 /// Manages a persistent process in a tmux window.
 ///
-/// The vessel is the pot, not the water. By default it starts
-/// a claude process, but `with_command` lets any process fill it.
+/// The vessel is the pot, not the water. `with_command` sets
+/// the process; `prepare()` creates the tmux window and starts it.
 pub struct TmuxVessel {
     session: String,
     window: String,
@@ -173,9 +173,8 @@ impl TmuxVessel {
             ])
             .output()
             .await
-            .map_err(|e| FlowError::SpringFailure {
-                name: self.window.clone(),
-                reason: format!("Failed to capture pane: {e}"),
+            .map_err(|e| {
+                FlowError::VesselFailure(format!("[{}] Failed to capture pane: {e}", self.window))
             })?;
 
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
@@ -198,24 +197,24 @@ impl TmuxVessel {
             // paste-buffer hits pty buffer limits (~4096 bytes on macOS),
             // truncating large inputs. File-based transport has no such limit.
             self.send_via_file(input).await?;
-        } else if input.len() > 4096 {
-            // Single-line large input: use load-buffer + paste-buffer.
-            self.send_via_buffer(input).await?;
         } else {
             let output = Command::new("tmux")
                 .args(["send-keys", "-l", "-t", &self.target(), input])
                 .output()
                 .await
-                .map_err(|e| FlowError::SpringFailure {
-                    name: self.window.clone(),
-                    reason: format!("Failed to send to tmux: {e}"),
+                .map_err(|e| {
+                    FlowError::VesselFailure(format!(
+                        "[{}] Failed to send to tmux: {e}",
+                        self.window
+                    ))
                 })?;
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                return Err(FlowError::SpringFailure {
-                    name: self.window.clone(),
-                    reason: format!("tmux send-keys failed: {}", stderr.trim()),
-                });
+                return Err(FlowError::VesselFailure(format!(
+                    "[{}] tmux send-keys failed: {}",
+                    self.window,
+                    stderr.trim()
+                )));
             }
         }
 
@@ -233,16 +232,19 @@ impl TmuxVessel {
                 .args(["send-keys", "-t", &self.target(), delimiter, "Enter"])
                 .output()
                 .await
-                .map_err(|e| FlowError::SpringFailure {
-                    name: self.window.clone(),
-                    reason: format!("Failed to send delimiter to tmux: {e}"),
+                .map_err(|e| {
+                    FlowError::VesselFailure(format!(
+                        "[{}] Failed to send delimiter to tmux: {e}",
+                        self.window
+                    ))
                 })?;
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                return Err(FlowError::SpringFailure {
-                    name: self.window.clone(),
-                    reason: format!("tmux send-keys (delimiter) failed: {}", stderr.trim()),
-                });
+                return Err(FlowError::VesselFailure(format!(
+                    "[{}] tmux send-keys (delimiter) failed: {}",
+                    self.window,
+                    stderr.trim()
+                )));
             }
         }
 
@@ -331,85 +333,28 @@ impl TmuxVessel {
     /// avoiding pty buffer limits that truncate paste-buffer content.
     async fn send_via_file(&self, input: &str) -> Result<(), FlowError> {
         let file_path = format!("/tmp/taoflow-{}-{}-input.txt", self.session, self.window);
-        std::fs::write(&file_path, input).map_err(|e| FlowError::SpringFailure {
-            name: self.window.clone(),
-            reason: format!("Failed to write input file: {e}"),
+        std::fs::write(&file_path, input).map_err(|e| {
+            FlowError::VesselFailure(format!("[{}] Failed to write input file: {e}", self.window))
         })?;
 
         let output = Command::new("tmux")
             .args(["send-keys", "-l", "-t", &self.target(), &file_path])
             .output()
             .await
-            .map_err(|e| FlowError::SpringFailure {
-                name: self.window.clone(),
-                reason: format!("Failed to send file path to tmux: {e}"),
+            .map_err(|e| {
+                FlowError::VesselFailure(format!(
+                    "[{}] Failed to send file path to tmux: {e}",
+                    self.window
+                ))
             })?;
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(FlowError::SpringFailure {
-                name: self.window.clone(),
-                reason: format!("tmux send-keys failed: {}", stderr.trim()),
-            });
+            return Err(FlowError::VesselFailure(format!(
+                "[{}] tmux send-keys failed: {}",
+                self.window,
+                stderr.trim()
+            )));
         }
-        Ok(())
-    }
-
-    /// Send large input via tmux buffer instead of command-line arguments.
-    async fn send_via_buffer(&self, input: &str) -> Result<(), FlowError> {
-        use tokio::io::AsyncWriteExt;
-
-        let mut child = Command::new("tmux")
-            .args(["load-buffer", "-"])
-            .stdin(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped())
-            .spawn()
-            .map_err(|e| FlowError::SpringFailure {
-                name: self.window.clone(),
-                reason: format!("Failed to spawn tmux load-buffer: {e}"),
-            })?;
-
-        {
-            let mut stdin = child.stdin.take().unwrap();
-            stdin
-                .write_all(input.as_bytes())
-                .await
-                .map_err(|e| FlowError::SpringFailure {
-                    name: self.window.clone(),
-                    reason: format!("Failed to write to tmux buffer: {e}"),
-                })?;
-        }
-
-        let output = child
-            .wait_with_output()
-            .await
-            .map_err(|e| FlowError::SpringFailure {
-                name: self.window.clone(),
-                reason: format!("tmux load-buffer failed: {e}"),
-            })?;
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(FlowError::SpringFailure {
-                name: self.window.clone(),
-                reason: format!("tmux load-buffer failed: {}", stderr.trim()),
-            });
-        }
-
-        let output = Command::new("tmux")
-            .args(["paste-buffer", "-t", &self.target()])
-            .output()
-            .await
-            .map_err(|e| FlowError::SpringFailure {
-                name: self.window.clone(),
-                reason: format!("Failed to paste buffer: {e}"),
-            })?;
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(FlowError::SpringFailure {
-                name: self.window.clone(),
-                reason: format!("tmux paste-buffer failed: {}", stderr.trim()),
-            });
-        }
-
         Ok(())
     }
 

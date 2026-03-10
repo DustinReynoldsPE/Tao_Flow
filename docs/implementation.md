@@ -398,6 +398,8 @@ It also enables non-resolution. A spring that reads its sibling's perspective an
 
 **Pearls preserve the journey.** Once the vessel flows, the chain of thought becomes capturable. Each flow produces a pearl -- the layered record from core (rain) to surface (ocean). See the dedicated section below. The vessel is the window; the pearl is the photograph. Pearls cannot form until the vessel carries water, because the vessel is what makes each layer visible.
 
+**The Still Lake learns fidelity.** The five questions (clarity, wholeness, kindness, truth, simplicity) all push toward compression. The clean water and storm pearl reflections revealed what this costs: Mountain's sharpest critique, Forest's most vivid image, the specific evidence that made each spring's voice distinctive — all polished away in settling. A sixth question emerges: *fidelity — is this faithful to the strongest specific content from the springs?* The lake must balance two forces: clarity (remove what confuses) and fidelity (preserve what distinguishes). This tension is itself the Tao — simplicity without homogenization. The lake should also stop introducing process artifacts ("this response was woven from...") — the settling should be invisible, not narrated.
+
 **Memories distill from pearls.** After a storm passes and its pearl is formed, each component examines its layer and extracts the essence. See the dedicated section below. This subsumes yielding memory (Phase 4's insight) -- it is broader, encompassing every component, not just springs. Memories cannot distill until pearls exist, because pearls are the raw material.
 
 **Level 3 end-to-end tests.** Real tmux, real LLM providers, the full journey from Rain to Ocean verified. These arrive naturally alongside the vessel -- when real springs flow in real panes, the e2e tests verify what the vessel makes visible.
@@ -466,7 +468,12 @@ prepare():
     (requires with_command -- the vessel must know its process)
 
 send(input):
-    send keys to window
+    if multiline (input_delimiter set):
+        write content to temp file, send the file path via send-keys
+        (pty buffer limits ~4096 bytes truncate paste-buffer; only the
+         short path travels through the pty, content through the filesystem)
+    else:
+        send-keys with literal input
     wait for sentinel in captured output
     extract response from full scrollback
 
@@ -474,7 +481,7 @@ teardown():
     kill session
 ```
 
-`build_tao_flow()` in `vessel/wiring.rs` assembles everything: creates the tmux session, builds a vessel per component (three springs, confluence, still lake, decomposer), wraps each in a `TmuxPaneSource`, and wires them into `TaoFlow`. Because `TmuxPaneSource` implements `LlmSource`, the flow does not change -- the vessel connects through the trait, not through special plumbing.
+`build_tao_flow()` in `vessel/wiring.rs` assembles everything: creates the tmux session, builds a vessel per component (three springs, confluence, still lake, decomposer), wraps each in a `TmuxPaneSource`, and wires them into `TaoFlow`. Because `TmuxPaneSource` implements `LlmSource`, the flow does not change -- the vessel connects through the trait, not through special plumbing. Wrapper scripts decontaminate the environment (`env -u CLAUDECODE`, `--setting-sources ''`, `cd /tmp`) so that the host's CLAUDE.md and project context do not flavor the springs' water. Multiline sources use `TAOFLOW_SYSTEM_END` to separate system prompts from user content within the same file.
 
 ---
 
@@ -565,7 +572,7 @@ Pearl
   │
   ├── Layer 5: Settling (the lake clarifies)
   │     clarity: 0.65, depth: Deep
-  │     "The response was refined for wholeness and simplicity..."
+  │     six questions: clarity, wholeness, kindness, truth, simplicity, fidelity
   │
   └── Surface: the ocean (what the user received)
         "Water does not try to be patient..."
@@ -752,9 +759,10 @@ Errors are not failures -- they are eddies in the flow. A single `FlowError` typ
 - **SpringFailure** -- a spring failed to respond. The watershed continues; the remaining springs still flow.
 - **Drought** -- no springs produced water. Only when ALL springs fail does the system stop.
 - **ConfluenceFailure** -- the merge failed. The streams existed but could not be woven.
-- **SettlingFailure** -- the Still Lake failed to settle. Graceful degradation: the river content reaches the ocean unchanged.
 - **DecompositionFailure** -- Storm-level decomposition failed. Graceful degradation: single-pass handles the Storm.
-- **VesselFailure** -- the tmux vessel could not prepare, send, or tear down.
+- **VesselFailure** -- the tmux vessel could not prepare, send, or capture. Carries the window name so the failing component is identifiable.
+
+*SettlingFailure was dropped: the Still Lake always degrades gracefully, returning the river content unchanged when settling fails. An error variant for a failure mode that was designed away is dead weight.*
 
 When a spring fails, the watershed filters it out and continues. A single dry spring does not dam the river. This resilience is natural to the architecture.
 

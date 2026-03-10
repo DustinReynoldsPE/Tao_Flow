@@ -32,14 +32,6 @@ impl River {
     pub fn has_eddies(&self) -> bool {
         !self.eddies.is_empty()
     }
-
-    pub fn resolved_eddies(&self) -> usize {
-        self.eddies.iter().filter(|e| e.is_resolved()).count()
-    }
-
-    pub fn unresolved_eddies(&self) -> usize {
-        self.eddies.iter().filter(|e| !e.is_resolved()).count()
-    }
 }
 
 #[cfg(test)]
@@ -103,7 +95,5 @@ mod tests {
         };
 
         assert!(river.has_eddies());
-        assert_eq!(river.resolved_eddies(), 1);
-        assert_eq!(river.unresolved_eddies(), 1);
     }
 }

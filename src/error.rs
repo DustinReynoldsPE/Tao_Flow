@@ -11,9 +11,6 @@ pub enum FlowError {
     #[error("Confluence failed to merge streams: {0}")]
     ConfluenceFailure(String),
 
-    #[error("Still Lake failed to settle: {0}")]
-    SettlingFailure(String),
-
     #[error("Decomposition failed: {0}")]
     DecompositionFailure(String),
 
