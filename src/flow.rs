@@ -1,5 +1,6 @@
 use crate::confluence::{ConfluencePool, Decomposer};
 use crate::error::FlowError;
+use crate::pearl::Pearl;
 use crate::still_lake::StillLake;
 use crate::water::rain::Volume;
 use crate::water::{Message, Ocean, Rain, Role, Stream, Vapor};
@@ -12,6 +13,7 @@ pub struct TaoFlow {
     decomposer: Option<Decomposer>,
     vapor: Vapor,
     max_depth: usize,
+    last_pearl: Option<Pearl>,
 }
 
 impl TaoFlow {
@@ -23,6 +25,7 @@ impl TaoFlow {
             decomposer: None,
             vapor: Vapor::default(),
             max_depth: 1,
+            last_pearl: None,
         }
     }
 
@@ -38,7 +41,10 @@ impl TaoFlow {
 
     pub async fn flow(&mut self, user_input: &str) -> Result<String, FlowError> {
         let rain = Rain::new(user_input, self.vapor.clone());
-        let ocean = self.flow_inner(rain, 0).await?;
+        let (ocean, pearl) = self.flow_inner(rain, 0).await?;
+
+        pearl.write();
+        self.last_pearl = Some(pearl);
 
         self.vapor.conversation_history.push(Message {
             role: Role::User,
@@ -56,13 +62,16 @@ impl TaoFlow {
     ///
     /// Storm volume at depth < max_depth triggers decomposition.
     /// All other rain, or failed decomposition, uses single pass.
-    async fn flow_inner(&self, rain: Rain, depth: usize) -> Result<Ocean, FlowError> {
+    async fn flow_inner(&self, rain: Rain, depth: usize) -> Result<(Ocean, Pearl), FlowError> {
         let volume = VolumeSensor::new().sense(&rain);
 
         if volume == Volume::Storm && depth < self.max_depth && self.decomposer.is_some() {
             match self.decompose_and_flow(rain.clone(), depth).await {
-                Ok(ocean) => Ok(ocean),
-                Err(_) => self.single_pass(rain).await,
+                Ok(result) => Ok(result),
+                Err(e) => {
+                    eprintln!("[flow] decompose_and_flow failed: {e}, falling back to single_pass");
+                    self.single_pass(rain).await
+                }
             }
         } else {
             self.single_pass(rain).await
@@ -70,109 +79,99 @@ impl TaoFlow {
     }
 
     /// The return: decompose, flow each part, reassemble.
-    async fn decompose_and_flow(&self, rain: Rain, depth: usize) -> Result<Ocean, FlowError> {
+    async fn decompose_and_flow(
+        &self,
+        rain: Rain,
+        depth: usize,
+    ) -> Result<(Ocean, Pearl), FlowError> {
         let decomposer = self.decomposer.as_ref().unwrap();
         let sub_questions = decomposer.decompose(&rain.raw_input).await?;
 
-        // Each sub-question flows through the full journey independently.
-        // Sub-questions carry the parent's vapor for context but do not update it.
-        let futures: Vec<_> = sub_questions
-            .iter()
-            .map(|q| self.flow_inner(Rain::new(q.as_str(), rain.vapor.clone()), depth + 1))
-            .collect();
+        // Sub-flows run sequentially: each uses shared vessel panes
+        // (springs, confluence, still lake), so concurrent access would
+        // interleave input/output on the same tmux pane.
+        let mut results = Vec::new();
+        for q in &sub_questions {
+            // Box::pin breaks the recursive async type: without it, the
+            // state machine (decompose_and_flow -> flow_inner -> decompose_and_flow)
+            // has infinite size. join_all avoided this via Vec heap allocation.
+            let result =
+                Box::pin(self.flow_inner(Rain::new(q.as_str(), rain.vapor.clone()), depth + 1))
+                    .await;
+            results.push(result);
+        }
 
-        let results = futures::future::join_all(futures).await;
+        let mut sub_pearls = Vec::new();
+        let mut sub_streams = Vec::new();
 
-        // Collect successful sub-flows as tributaries for higher confluence
-        let sub_streams: Vec<Stream> = results
-            .into_iter()
-            .enumerate()
-            .filter_map(|(i, result)| {
-                result
-                    .ok()
-                    .filter(|o| o.has_substance())
-                    .map(|ocean| Stream::new(format!("tributary_{}", i + 1), ocean.content))
-            })
-            .collect();
+        for (i, result) in results.into_iter().enumerate() {
+            if let Ok((ocean, pearl)) = result {
+                sub_pearls.push(pearl);
+                if ocean.has_substance() {
+                    sub_streams.push(Stream::new(format!("tributary_{}", i + 1), ocean.content));
+                }
+            }
+        }
 
         if sub_streams.is_empty() {
             return Err(FlowError::Drought);
         }
 
-        // Higher confluence: the sub-rivers merge
         let river = self.confluence.merge(sub_streams, &rain.raw_input).await?;
+        let captured_river = river.clone();
+        let ocean = self.still_lake.settle(river, &rain.raw_input).await?;
 
-        // Final settling
-        self.still_lake.settle(river, &rain.raw_input).await
+        let pearl = Pearl::new(
+            rain.raw_input.clone(),
+            vec![],
+            Some(captured_river),
+            ocean.content.clone(),
+        )
+        .with_sub_pearls(sub_pearls);
+
+        Ok((ocean, pearl))
     }
 
     /// The single-pass journey: watershed → confluence → still lake → ocean.
-    async fn single_pass(&self, mut rain: Rain) -> Result<Ocean, FlowError> {
+    async fn single_pass(&self, mut rain: Rain) -> Result<(Ocean, Pearl), FlowError> {
         let streams = self.watershed.receive_rain(&mut rain).await;
 
         if streams.is_empty() {
             return Err(FlowError::Drought);
         }
 
+        let captured_streams = streams.clone();
         let river = self.confluence.merge(streams, &rain.raw_input).await?;
-        self.still_lake.settle(river, &rain.raw_input).await
+        let captured_river = river.clone();
+        let ocean = self.still_lake.settle(river, &rain.raw_input).await?;
+
+        let pearl = Pearl::new(
+            rain.raw_input.clone(),
+            captured_streams,
+            Some(captured_river),
+            ocean.content.clone(),
+        );
+
+        Ok((ocean, pearl))
     }
 
     pub fn vapor(&self) -> &Vapor {
         &self.vapor
+    }
+
+    pub fn last_pearl(&self) -> Option<&Pearl> {
+        self.last_pearl.as_ref()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_springs;
     use crate::watershed::source::mock::{DrySource, MockSource};
     use crate::watershed::spring::SpringConfig;
-    use crate::watershed::{DesertSpring, ForestSpring, MountainSpring};
+    use crate::watershed::MountainSpring;
     use std::collections::HashMap;
-
-    fn mountain_spring(response: &str) -> Box<dyn crate::watershed::Spring> {
-        let mut affinities = HashMap::new();
-        affinities.insert("philosophy".into(), 0.9);
-        let config = SpringConfig {
-            name: "mountain".into(),
-            nature: "deep reasoning".into(),
-            affinities,
-        };
-        Box::new(MountainSpring::new(
-            config,
-            Box::new(MockSource::new(response)),
-        ))
-    }
-
-    fn desert_spring(response: &str) -> Box<dyn crate::watershed::Spring> {
-        let mut affinities = HashMap::new();
-        affinities.insert("quick_answers".into(), 0.9);
-        let config = SpringConfig {
-            name: "desert".into(),
-            nature: "speed, efficiency".into(),
-            affinities,
-        };
-        Box::new(DesertSpring::new(
-            config,
-            Box::new(MockSource::new(response)),
-        ))
-    }
-
-    fn forest_spring(response: &str) -> Box<dyn crate::watershed::Spring> {
-        let mut affinities = HashMap::new();
-        affinities.insert("narrative".into(), 0.9);
-        affinities.insert("empathy".into(), 0.8);
-        let config = SpringConfig {
-            name: "forest".into(),
-            nature: "creativity, narrative, empathy".into(),
-            affinities,
-        };
-        Box::new(ForestSpring::new(
-            config,
-            Box::new(MockSource::new(response)),
-        ))
-    }
 
     fn test_confluence(response: &str) -> ConfluencePool {
         ConfluencePool::new(Box::new(MockSource::new(response)))
@@ -191,8 +190,8 @@ mod tests {
     #[tokio::test]
     async fn rain_flows_to_ocean() {
         let watershed = Watershed::new(vec![
-            mountain_spring("The Tao is the way."),
-            desert_spring("It's the way."),
+            test_springs::mountain("The Tao is the way."),
+            test_springs::desert("It's the way."),
         ]);
         let confluence = test_confluence("The Tao is the way.");
         let lake = test_lake("The Tao is the way, settled.");
@@ -204,8 +203,8 @@ mod tests {
     #[tokio::test]
     async fn droplet_uses_only_desert() {
         let watershed = Watershed::new(vec![
-            mountain_spring("Should not appear."),
-            desert_spring("Hello!"),
+            test_springs::mountain("Should not appear."),
+            test_springs::desert("Hello!"),
         ]);
         // Single stream: clarity 1.0, lake does nothing (wu wei)
         let confluence = test_confluence("unused");
@@ -218,9 +217,9 @@ mod tests {
     #[tokio::test]
     async fn three_springs_merge_and_settle() {
         let watershed = Watershed::new(vec![
-            mountain_spring("Deep analysis of the question."),
-            desert_spring("Quick, direct answer."),
-            forest_spring("A story about the answer."),
+            test_springs::mountain("Deep analysis of the question."),
+            test_springs::desert("Quick, direct answer."),
+            test_springs::forest("A story about the answer."),
         ]);
         // MockSource returns same response for all calls (detection, weaving, settling)
         let woven = "A woven response from three perspectives.";
@@ -238,7 +237,7 @@ mod tests {
 
     #[tokio::test]
     async fn vapor_accumulates_across_flows() {
-        let watershed = Watershed::new(vec![desert_spring("Response.")]);
+        let watershed = Watershed::new(vec![test_springs::desert("Response.")]);
         let confluence = test_confluence("unused");
         let lake = test_lake("should not be called");
         let mut tao = TaoFlow::new(watershed, confluence, lake);
@@ -273,8 +272,8 @@ mod tests {
     #[tokio::test]
     async fn storm_with_decomposer_flows() {
         let watershed = Watershed::new(vec![
-            mountain_spring("Mountain's wisdom on the sub-topic."),
-            desert_spring("Desert's speed on the sub-topic."),
+            test_springs::mountain("Mountain's wisdom on the sub-topic."),
+            test_springs::desert("Desert's speed on the sub-topic."),
         ]);
         let confluence = test_confluence("Woven response.");
         let lake = test_lake("Settled response.");
@@ -293,8 +292,8 @@ mod tests {
     #[tokio::test]
     async fn storm_without_decomposer_single_passes() {
         let watershed = Watershed::new(vec![
-            mountain_spring("Mountain's response."),
-            desert_spring("Desert's response."),
+            test_springs::mountain("Mountain's response."),
+            test_springs::desert("Desert's response."),
         ]);
         let confluence = test_confluence("Woven.");
         let lake = test_lake("Settled.");
@@ -307,8 +306,10 @@ mod tests {
 
     #[tokio::test]
     async fn decomposition_failure_falls_back_to_single_pass() {
-        let watershed =
-            Watershed::new(vec![mountain_spring("Mountain."), desert_spring("Desert.")]);
+        let watershed = Watershed::new(vec![
+            test_springs::mountain("Mountain."),
+            test_springs::desert("Desert."),
+        ]);
         let confluence = test_confluence("Woven.");
         let lake = test_lake("Settled.");
         // DrySource causes decomposition to fail
@@ -325,8 +326,8 @@ mod tests {
     #[tokio::test]
     async fn vapor_updated_once_after_recursive_flow() {
         let watershed = Watershed::new(vec![
-            mountain_spring("Response."),
-            desert_spring("Response."),
+            test_springs::mountain("Response."),
+            test_springs::desert("Response."),
         ]);
         let confluence = test_confluence("Woven.");
         let lake = test_lake("Settled.");
@@ -345,7 +346,7 @@ mod tests {
 
     #[tokio::test]
     async fn non_storm_ignores_decomposer() {
-        let watershed = Watershed::new(vec![desert_spring("Quick.")]);
+        let watershed = Watershed::new(vec![test_springs::desert("Quick.")]);
         let confluence = test_confluence("unused");
         let lake = test_lake("unused");
         // Decomposer would fail if called (single question = error)
@@ -361,8 +362,8 @@ mod tests {
     #[tokio::test]
     async fn max_depth_prevents_infinite_recursion() {
         let watershed = Watershed::new(vec![
-            mountain_spring("Response."),
-            desert_spring("Response."),
+            test_springs::mountain("Response."),
+            test_springs::desert("Response."),
         ]);
         let confluence = test_confluence("Woven.");
         let lake = test_lake("Settled.");
@@ -379,5 +380,205 @@ mod tests {
         // exceed max_depth so they single-pass
         let result = tao.flow(&storm_input).await.unwrap();
         assert!(!result.is_empty());
+    }
+
+    // --- Pearl: the observation layer ---
+
+    #[tokio::test]
+    async fn pearl_captures_single_pass_journey() {
+        let watershed = Watershed::new(vec![
+            test_springs::mountain("Deep truth."),
+            test_springs::desert("Quick truth."),
+            test_springs::forest("Warm truth."),
+        ]);
+        let confluence = test_confluence("Woven truth.");
+        let lake = test_lake("Settled truth.");
+        let mut tao = TaoFlow::new(watershed, confluence, lake);
+
+        let input = "Explain the nature of water in philosophy and storytelling and practice";
+        let result = tao.flow(input).await.unwrap();
+
+        let pearl = tao.last_pearl().expect("pearl should form after flow");
+        assert_eq!(pearl.core, input);
+        assert_eq!(pearl.ocean, result);
+        assert!(!pearl.streams.is_empty(), "pearl should capture streams");
+        assert!(pearl.river.is_some(), "pearl should capture the river");
+        assert!(pearl.sub_pearls.is_empty(), "single-pass has no sub-pearls");
+
+        let river = pearl.river.as_ref().unwrap();
+        assert!(!river.tributaries.is_empty());
+    }
+
+    #[tokio::test]
+    async fn pearl_captures_droplet_layers() {
+        let watershed = Watershed::new(vec![
+            test_springs::mountain("Unused."),
+            test_springs::desert("Hello!"),
+        ]);
+        let confluence = test_confluence("unused");
+        let lake = test_lake("unused");
+        let mut tao = TaoFlow::new(watershed, confluence, lake);
+
+        tao.flow("hi").await.unwrap();
+
+        let pearl = tao.last_pearl().unwrap();
+        assert_eq!(pearl.core, "hi");
+        assert_eq!(pearl.ocean, "Hello!");
+        assert_eq!(pearl.streams.len(), 1);
+        assert_eq!(pearl.streams[0].source, "desert");
+    }
+
+    #[tokio::test]
+    async fn pearl_nests_sub_pearls_in_storm() {
+        let watershed = Watershed::new(vec![
+            test_springs::mountain("Mountain on sub-topic."),
+            test_springs::desert("Desert on sub-topic."),
+        ]);
+        let confluence = test_confluence("Woven.");
+        let lake = test_lake("Settled.");
+        let decomposer = test_decomposer(
+            "Q: What is the philosophical foundation?\nQ: What are the practical applications?",
+        );
+
+        let mut tao = TaoFlow::new(watershed, confluence, lake).with_decomposer(decomposer);
+
+        let storm_input = "word ".repeat(101);
+        let result = tao.flow(&storm_input).await.unwrap();
+
+        let pearl = tao.last_pearl().unwrap();
+        assert_eq!(pearl.ocean, result);
+        assert_eq!(
+            pearl.sub_pearls.len(),
+            2,
+            "storm should decompose into 2 sub-pearls"
+        );
+
+        for sub in &pearl.sub_pearls {
+            assert!(!sub.core.is_empty(), "sub-pearl should have a core");
+            assert!(!sub.ocean.is_empty(), "sub-pearl should have an ocean");
+            assert!(sub.river.is_some(), "sub-pearl should have a river");
+        }
+
+        // Top-level storm pearl has no direct streams (they live in sub-pearls)
+        assert!(pearl.streams.is_empty());
+        assert!(
+            pearl.river.is_some(),
+            "storm pearl has higher confluence river"
+        );
+    }
+
+    #[tokio::test]
+    async fn pearl_replaces_on_each_flow() {
+        let watershed = Watershed::new(vec![test_springs::desert("Response.")]);
+        let confluence = test_confluence("unused");
+        let lake = test_lake("unused");
+        let mut tao = TaoFlow::new(watershed, confluence, lake);
+
+        assert!(tao.last_pearl().is_none(), "no pearl before first flow");
+
+        tao.flow("first").await.unwrap();
+        assert_eq!(tao.last_pearl().unwrap().core, "first");
+
+        tao.flow("second").await.unwrap();
+        assert_eq!(tao.last_pearl().unwrap().core, "second");
+    }
+
+    #[tokio::test]
+    async fn drought_produces_no_pearl() {
+        let watershed = Watershed::new(vec![Box::new(MountainSpring::new(
+            SpringConfig {
+                name: "mountain".into(),
+                nature: "deep".into(),
+                affinities: HashMap::new(),
+            },
+            Box::new(DrySource),
+        )) as Box<dyn crate::watershed::Spring>]);
+        let confluence = test_confluence("unused");
+        let lake = test_lake("unused");
+        let mut tao = TaoFlow::new(watershed, confluence, lake);
+
+        let _ = tao.flow("hello").await;
+        assert!(tao.last_pearl().is_none(), "drought leaves no pearl");
+    }
+
+    #[tokio::test]
+    async fn pearl_writes_folder_to_storms() {
+        let watershed = Watershed::new(vec![test_springs::desert("Written.")]);
+        let confluence = test_confluence("unused");
+        let lake = test_lake("unused");
+        let mut tao = TaoFlow::new(watershed, confluence, lake);
+
+        tao.flow("pearl folder test").await.unwrap();
+
+        // Find the timestamped folder
+        let entries: Vec<_> = std::fs::read_dir(".storms")
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| {
+                e.file_name()
+                    .to_string_lossy()
+                    .starts_with("pearl-folder-test-")
+            })
+            .collect();
+        assert!(!entries.is_empty(), "pearl folder should be created");
+
+        let dir = entries[0].path();
+        assert_eq!(
+            std::fs::read_to_string(dir.join("core.md")).unwrap(),
+            "pearl folder test"
+        );
+        assert_eq!(
+            std::fs::read_to_string(dir.join("ocean.md")).unwrap(),
+            "Written."
+        );
+        assert!(dir.join("streams/desert.md").exists());
+        assert!(dir.join("pearl.json").exists());
+
+        // Clean up
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[tokio::test]
+    async fn storm_pearl_writes_nested_folders() {
+        let watershed = Watershed::new(vec![
+            test_springs::mountain("Sub answer."),
+            test_springs::desert("Sub answer."),
+        ]);
+        let confluence = test_confluence("Woven.");
+        let lake = test_lake("Settled.");
+        let decomposer = test_decomposer("Q: First sub?\nQ: Second sub?");
+
+        let mut tao = TaoFlow::new(watershed, confluence, lake).with_decomposer(decomposer);
+
+        let storm_input = "word ".repeat(101);
+        tao.flow(&storm_input).await.unwrap();
+
+        let pearl = tao.last_pearl().unwrap();
+        assert_eq!(pearl.sub_pearls.len(), 2);
+
+        // Write to a known directory to verify structure
+        let dir = ".storms/_test_storm_folders";
+        let _ = std::fs::remove_dir_all(dir);
+        std::fs::create_dir_all(dir).unwrap();
+        pearl.write_to_dir(dir);
+
+        assert!(std::path::Path::new(&format!("{dir}/sub-pearls")).is_dir());
+        assert!(std::path::Path::new(&format!("{dir}/ocean.md")).exists());
+        assert!(std::path::Path::new(&format!("{dir}/river.md")).exists());
+
+        // Sub-pearl folders are numbered and contain their own layers
+        let sub_entries: Vec<_> = std::fs::read_dir(format!("{dir}/sub-pearls"))
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .collect();
+        assert_eq!(sub_entries.len(), 2, "should have 2 sub-pearl folders");
+
+        for entry in &sub_entries {
+            let p = entry.path();
+            assert!(p.join("core.md").exists());
+            assert!(p.join("ocean.md").exists());
+        }
+
+        std::fs::remove_dir_all(dir).ok();
     }
 }

@@ -11,14 +11,11 @@ pub enum FlowError {
     #[error("Confluence failed to merge streams: {0}")]
     ConfluenceFailure(String),
 
-    #[error("Still Lake failed to clarify: {0}")]
-    ClarityFailure(String),
-
     #[error("Decomposition failed: {0}")]
     DecompositionFailure(String),
 
-    #[error("Vessel error: {0}")]
-    VesselError(String),
+    #[error("Vessel failed: {0}")]
+    VesselFailure(String),
 }
 
 #[cfg(test)]

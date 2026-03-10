@@ -147,7 +147,7 @@ mod tests {
         assert_eq!(eddies.len(), 1);
         assert_eq!(eddies[0].nature, EddyNature::Interpretive);
         assert_eq!(eddies[0].topic, "best approach");
-        assert_eq!(eddies[0].stream_count(), 2);
+        assert_eq!(eddies[0].positions.len(), 2);
     }
 
     #[tokio::test]

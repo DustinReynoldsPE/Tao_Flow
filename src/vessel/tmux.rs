@@ -4,8 +4,8 @@ use crate::error::FlowError;
 
 /// Manages a persistent process in a tmux window.
 ///
-/// The vessel is the pot, not the water. By default it starts
-/// a claude process, but `with_command` lets any process fill it.
+/// The vessel is the pot, not the water. `with_command` sets
+/// the process; `prepare()` creates the tmux window and starts it.
 pub struct TmuxVessel {
     session: String,
     window: String,
@@ -44,9 +44,6 @@ impl TmuxVessel {
     /// Set a sentinel pattern that signals the process is ready for input.
     /// When set, the vessel waits for this pattern to appear after the
     /// input line instead of polling for content stability.
-    ///
-    /// Chapter 15: "Do you have the patience to wait till your mud
-    /// settles and the water is clear?"
     pub fn with_sentinel(mut self, sentinel: impl Into<String>) -> Self {
         self.sentinel = Some(sentinel.into());
         self
@@ -64,16 +61,26 @@ impl TmuxVessel {
         format!("{}:{}", self.session, self.window)
     }
 
-    /// Ensure the tmux session and window exist with a claude process.
-    pub async fn prepare(&mut self, system_prompt: &str) -> Result<(), FlowError> {
+    /// Ensure the tmux session and window exist with the configured process.
+    ///
+    /// Requires `with_command()` to have been called — the vessel
+    /// must know what process to start before it can prepare.
+    pub async fn prepare(&mut self) -> Result<(), FlowError> {
         if self.initialized {
             return Ok(());
         }
 
+        let cmd = self.command.as_ref().ok_or_else(|| {
+            FlowError::VesselFailure(
+                "Vessel has no command configured. Call with_command() before prepare().".into(),
+            )
+        })?;
+        let cmd = cmd.clone();
+
         // Check if tmux is available
         let tmux_check = Command::new("tmux").arg("-V").output().await;
         if tmux_check.is_err() || !tmux_check.unwrap().status.success() {
-            return Err(FlowError::VesselError(
+            return Err(FlowError::VesselFailure(
                 "tmux is not installed or not available".into(),
             ));
         }
@@ -92,16 +99,16 @@ impl TmuxVessel {
                 .status()
                 .await
                 .map_err(|e| {
-                    FlowError::VesselError(format!("Failed to create tmux session: {e}"))
+                    FlowError::VesselFailure(format!("Failed to create tmux session: {e}"))
                 })?;
 
             if !status.success() {
-                return Err(FlowError::VesselError(
+                return Err(FlowError::VesselFailure(
                     "Failed to create tmux session".into(),
                 ));
             }
 
-            self.start_process(system_prompt).await?;
+            self.start_process(&cmd).await?;
         } else {
             // Session exists; check if window exists
             let has_window = Command::new("tmux")
@@ -121,10 +128,10 @@ impl TmuxVessel {
                     .status()
                     .await
                     .map_err(|e| {
-                        FlowError::VesselError(format!("Failed to create tmux window: {e}"))
+                        FlowError::VesselFailure(format!("Failed to create tmux window: {e}"))
                     })?;
 
-                self.start_process(system_prompt).await?;
+                self.start_process(&cmd).await?;
             }
         }
 
@@ -133,21 +140,14 @@ impl TmuxVessel {
     }
 
     /// Start a process inside this vessel's window.
-    async fn start_process(&self, system_prompt: &str) -> Result<(), FlowError> {
-        let cmd = match self.command {
-            Some(ref custom) => custom.clone(),
-            None => format!(
-                "env -u CLAUDECODE claude --model {} --system-prompt '{}'",
-                self.model,
-                system_prompt.replace('\'', "'\\''")
-            ),
-        };
-
+    async fn start_process(&self, cmd: &str) -> Result<(), FlowError> {
         Command::new("tmux")
-            .args(["send-keys", "-t", &self.target(), &cmd, "Enter"])
+            .args(["send-keys", "-t", &self.target(), cmd, "Enter"])
             .output()
             .await
-            .map_err(|e| FlowError::VesselError(format!("Failed to start process in tmux: {e}")))?;
+            .map_err(|e| {
+                FlowError::VesselFailure(format!("Failed to start process in tmux: {e}"))
+            })?;
 
         // Give the process a moment to start
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
@@ -173,9 +173,8 @@ impl TmuxVessel {
             ])
             .output()
             .await
-            .map_err(|e| FlowError::SpringFailure {
-                name: self.window.clone(),
-                reason: format!("Failed to capture pane: {e}"),
+            .map_err(|e| {
+                FlowError::VesselFailure(format!("[{}] Failed to capture pane: {e}", self.window))
             })?;
 
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
@@ -193,22 +192,30 @@ impl TmuxVessel {
             return Ok(String::new());
         }
 
-        // Send the input as literal text (-l avoids key name interpretation
-        // in multi-line content that might contain "Enter", "Escape", etc.)
-        let output = Command::new("tmux")
-            .args(["send-keys", "-l", "-t", &self.target(), input])
-            .output()
-            .await
-            .map_err(|e| FlowError::SpringFailure {
-                name: self.window.clone(),
-                reason: format!("Failed to send to tmux: {e}"),
-            })?;
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(FlowError::SpringFailure {
-                name: self.window.clone(),
-                reason: format!("tmux send-keys failed: {}", stderr.trim()),
-            });
+        if self.input_delimiter.is_some() {
+            // Multiline mode: write content to a temp file and send the path.
+            // paste-buffer hits pty buffer limits (~4096 bytes on macOS),
+            // truncating large inputs. File-based transport has no such limit.
+            self.send_via_file(input).await?;
+        } else {
+            let output = Command::new("tmux")
+                .args(["send-keys", "-l", "-t", &self.target(), input])
+                .output()
+                .await
+                .map_err(|e| {
+                    FlowError::VesselFailure(format!(
+                        "[{}] Failed to send to tmux: {e}",
+                        self.window
+                    ))
+                })?;
+            if !output.status.success() {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                return Err(FlowError::VesselFailure(format!(
+                    "[{}] tmux send-keys failed: {}",
+                    self.window,
+                    stderr.trim()
+                )));
+            }
         }
 
         // Send Enter key separately (not literal, so "Enter" is the key)
@@ -225,16 +232,19 @@ impl TmuxVessel {
                 .args(["send-keys", "-t", &self.target(), delimiter, "Enter"])
                 .output()
                 .await
-                .map_err(|e| FlowError::SpringFailure {
-                    name: self.window.clone(),
-                    reason: format!("Failed to send delimiter to tmux: {e}"),
+                .map_err(|e| {
+                    FlowError::VesselFailure(format!(
+                        "[{}] Failed to send delimiter to tmux: {e}",
+                        self.window
+                    ))
                 })?;
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                return Err(FlowError::SpringFailure {
-                    name: self.window.clone(),
-                    reason: format!("tmux send-keys (delimiter) failed: {}", stderr.trim()),
-                });
+                return Err(FlowError::VesselFailure(format!(
+                    "[{}] tmux send-keys (delimiter) failed: {}",
+                    self.window,
+                    stderr.trim()
+                )));
             }
         }
 
@@ -318,13 +328,43 @@ impl TmuxVessel {
         Ok(lines.join("\n").trim().to_string())
     }
 
+    /// Write input to a temp file and send the file path via send-keys.
+    /// The multiline wrapper script reads from the file instead of stdin,
+    /// avoiding pty buffer limits that truncate paste-buffer content.
+    async fn send_via_file(&self, input: &str) -> Result<(), FlowError> {
+        let file_path = format!("/tmp/taoflow-{}-{}-input.txt", self.session, self.window);
+        std::fs::write(&file_path, input).map_err(|e| {
+            FlowError::VesselFailure(format!("[{}] Failed to write input file: {e}", self.window))
+        })?;
+
+        let output = Command::new("tmux")
+            .args(["send-keys", "-l", "-t", &self.target(), &file_path])
+            .output()
+            .await
+            .map_err(|e| {
+                FlowError::VesselFailure(format!(
+                    "[{}] Failed to send file path to tmux: {e}",
+                    self.window
+                ))
+            })?;
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(FlowError::VesselFailure(format!(
+                "[{}] tmux send-keys failed: {}",
+                self.window,
+                stderr.trim()
+            )));
+        }
+        Ok(())
+    }
+
     /// Kill the tmux session this vessel belongs to.
     pub async fn teardown(&self) -> Result<(), FlowError> {
         Command::new("tmux")
             .args(["kill-session", "-t", &self.session])
             .status()
             .await
-            .map_err(|e| FlowError::VesselError(format!("Failed to kill tmux session: {e}")))?;
+            .map_err(|e| FlowError::VesselFailure(format!("Failed to kill tmux session: {e}")))?;
         Ok(())
     }
 

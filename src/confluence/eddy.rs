@@ -47,14 +47,6 @@ impl Eddy {
         }
     }
 
-    pub fn stream_count(&self) -> usize {
-        self.positions.len()
-    }
-
-    pub fn is_verifiable(&self) -> bool {
-        self.nature == EddyNature::Factual
-    }
-
     pub fn is_resolved(&self) -> bool {
         self.resolution.is_some()
     }
@@ -84,28 +76,8 @@ mod tests {
                 },
             ],
         );
-        assert_eq!(eddy.stream_count(), 2);
-        assert!(!eddy.is_verifiable());
+        assert_eq!(eddy.positions.len(), 2);
         assert!(!eddy.is_resolved());
-    }
-
-    #[test]
-    fn factual_eddy_is_verifiable() {
-        let eddy = Eddy::new(
-            "capital of France",
-            EddyNature::Factual,
-            vec![
-                Position {
-                    source: "mountain".into(),
-                    view: "Paris".into(),
-                },
-                Position {
-                    source: "desert".into(),
-                    view: "Lyon".into(),
-                },
-            ],
-        );
-        assert!(eddy.is_verifiable());
     }
 
     #[test]

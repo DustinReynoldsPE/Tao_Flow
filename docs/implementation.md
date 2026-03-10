@@ -80,9 +80,12 @@ The low place that people disdain is the CLI that's already on the machine. A Cl
 
 ```
 tmux session: tao-flow
-  window 0: mountain  (claude --model opus, persistent)
-  window 1: desert    (claude --model haiku, persistent)
-  window 2: forest    (claude --model sonnet, persistent)
+  window: mountain    (claude --model sonnet, persistent)
+  window: desert      (claude --model haiku, persistent)
+  window: forest      (claude --model sonnet, persistent)
+  window: confluence  (claude --model haiku, utility)
+  window: still-lake  (claude --model haiku, utility)
+  window: decomposer  (claude --model haiku, utility)
 ```
 
 This architecture provides:
@@ -142,7 +145,8 @@ src/
     pool.rs                     # ConfluencePool -- detect, yield, weave
 
   vessel/                       # The observable space where springs flow
-    tmux.rs                     # TmuxVessel -- persistent spring sessions in tmux panes
+    tmux.rs                     # TmuxVessel -- persistent spring sessions in tmux windows
+    wiring.rs                   # VesselConfig, build_tao_flow -- assembles the running system
 
   still_lake/                   # Final refinement (the five questions)
 ```
@@ -241,14 +245,14 @@ flow(user_input):
     streams = watershed.receive_rain(rain)
     if no streams → Drought error
     river = confluence.merge(streams, rain_input)
-    ocean = Ocean from river content
+    ocean = still_lake.settle(river, rain_input)
     update vapor with (user_input, ocean_content)
     return ocean content
 ```
 
 The water cycle: after each flow, the user's input and the system's response are pushed into vapor as conversation history. The next rain carries this vapor, so springs see the full conversation. Context accumulates naturally.
 
-The Still Lake sits between confluence and ocean, reading river clarity to know how much polishing is needed. Graceful degradation: if settling fails, the river content reaches the ocean unchanged.
+The Still Lake reads river clarity to know how much polishing is needed. Graceful degradation: if settling fails, the river content reaches the ocean unchanged.
 
 ---
 
@@ -355,7 +359,7 @@ Wu wei: clear water (clarity 1.0) passes through untouched. Graceful degradation
 The single-pass flow was complete and whole. Phase 6 deepened it. A Storm-level request cannot be answered in one pass. Phase 6 made the flow recursive:
 
 1. **Decomposition** -- `Decomposer` breaks Storm-level rain into 2-5 independent sub-questions via LLM. Parses "Q:" prefix format with numbered-list fallback. Graceful degradation: if decomposition fails, single-pass handles the Storm.
-2. **Recursive flow** -- each sub-question flows through the full single-pass journey independently and concurrently via `futures::join_all`. Sub-questions carry the parent's vapor for context but do not update it.
+2. **Recursive flow** -- each sub-question flows through the full single-pass journey independently and sequentially (shared vessel panes require it -- independence of thought is not the same as independence of vessel). Sub-questions carry the parent's vapor for context but do not update it.
 3. **Higher confluence** -- sub-oceans become tributaries. The same ConfluencePool weaves them. The same StillLake settles the result. No new types were needed.
 4. **Termination** -- `max_depth` prevents infinite recursion. Natural volume reduction provides the primary guard: sub-questions are shorter than storms, so they classify as Shower or Downpour and single-pass.
 
@@ -369,9 +373,32 @@ The single-pass flow was complete and whole. Phase 6 deepened it. A Storm-level 
 
 The numbered phases are complete. What follows is not Phase 7 -- it is organic growth, shaped by use. The reflections across six phases revealed a natural ordering: the vessel is the foundation, pearls record what flows through it, memories distill from pearls. Each layer depends on the one beneath.
 
-**The vessel enters the water.** This is the foundation of everything that follows. The plumbing exists: `TmuxPaneSource` implements `LlmSource`, sentinel detection works, integration tests pass. What remains is connecting real springs -- Mountain in an Opus pane, Desert in a Haiku pane, Forest in a Sonnet pane -- and determining claude's interactive prompt sentinel. When this connection is made, the system becomes observable by default. The vessel is not one feature among many -- it is the observation layer that makes pearls possible, memories possible, and human guidance natural. Phase 3 anticipated human pause points (boundaries in recursive flows where the user can guide direction). Their shape will emerge from watching real flows in the vessel -- they cannot be designed in advance.
+**Yielding returns to the springs.** The current yielding protocol sends compressed position summaries to a neutral LLM that resolves each eddy. The springs never see each other's work. The 231710 storm pearl revealed what this costs: Mountain's sharpest critique ("Marcus Aurelius was also emperor -- he had more levers than most"), Forest's most vivid image ("a haunted house full of ghosts from states that no longer exist"), Mountain's most precise structural parallel (OpenTelemetry's span model as "a formal ontology of interdependent arising") -- all lost in compression before yielding even began. A mediator summarizing two positions cannot preserve what made each position distinctive.
+
+The vessel changes this. Each spring is a persistent tmux pane. When eddies are detected, each spring already holds the context of its original response. Instead of compressing positions for a neutral third party, the system sends each spring the full responses from the siblings it diverges with. Mountain reads Forest's warmth. Desert reads Mountain's depth. Each spring responds to the other perspectives in its own voice -- not defending, but yielding while remaining itself.
+
+The yielding becomes a dialogue:
+
+```
+detect eddies from streams
+for each eddy:
+    identify the springs whose positions diverge
+    for each diverging spring (in its pane):
+        send the full sibling responses that form the other side of the eddy
+        receive the spring's response -- yielding in its own voice
+    the yielding material is now the springs' own words, not a mediator's summary
+weave from the original streams + the springs' yielding responses
+```
+
+This preserves what the current protocol erases: the distinctive voice, the specific evidence, the hard-won images. When Mountain yields to Forest's narrative, it yields as the mountain -- structurally, with precision. When Forest yields to Mountain's analysis, it yields as the forest -- with warmth and embodiment. The yielding carries the character of the yielder, not the flatness of a neutral arbiter.
+
+It also enables non-resolution. A spring that reads its sibling's perspective and finds genuine, productive disagreement can say so. The current protocol resolves every eddy because the neutral LLM is instructed to find common ground. A spring speaking for itself can say: "I have read the mountain's analysis. I do not agree, and the disagreement is where the insight lives." Some eddies should not resolve. The tension between positions is sometimes the deepest truth.
+
+**The vessel entered the water.** `vessel/wiring.rs` assembles the running system: `VesselConfig` holds model choices, `build_tao_flow()` creates the tmux session and wires three springs, confluence, still lake, and decomposer -- each in its own window. `main.rs` is a REPL that flows user input through the full watershed. `cargo run` starts the system; `tmux attach -t tao-flow` watches the water flow. The vessel is the observation layer that makes pearls possible, memories possible, and human guidance natural. Phase 3 anticipated human pause points (boundaries in recursive flows where the user can guide direction). Their shape will emerge from watching real flows in the vessel -- they cannot be designed in advance.
 
 **Pearls preserve the journey.** Once the vessel flows, the chain of thought becomes capturable. Each flow produces a pearl -- the layered record from core (rain) to surface (ocean). See the dedicated section below. The vessel is the window; the pearl is the photograph. Pearls cannot form until the vessel carries water, because the vessel is what makes each layer visible.
+
+**The Still Lake learns fidelity.** The five questions (clarity, wholeness, kindness, truth, simplicity) all push toward compression. The clean water and storm pearl reflections revealed what this costs: Mountain's sharpest critique, Forest's most vivid image, the specific evidence that made each spring's voice distinctive — all polished away in settling. A sixth question emerges: *fidelity — is this faithful to the strongest specific content from the springs?* The lake must balance two forces: clarity (remove what confuses) and fidelity (preserve what distinguishes). This tension is itself the Tao — simplicity without homogenization. The lake should also stop introducing process artifacts ("this response was woven from...") — the settling should be invisible, not narrated.
 
 **Memories distill from pearls.** After a storm passes and its pearl is formed, each component examines its layer and extracts the essence. See the dedicated section below. This subsumes yielding memory (Phase 4's insight) -- it is broader, encompassing every component, not just springs. Memories cannot distill until pearls exist, because pearls are the raw material.
 
@@ -396,11 +423,13 @@ The vessel makes the journey visible. It is the foundation of the system's next 
 tmux session: tao-flow
   ┌─────────────┬─────────────┬─────────────┐
   │  mountain   │   desert    │   forest    │
-  │  (opus)     │   (haiku)   │   (sonnet)  │
+  │  (sonnet)   │   (haiku)   │   (sonnet)  │
   │             │             │             │
   │ [prompt]    │ [prompt]    │ [prompt]    │
-  │ [thinking]  │ [thinking]  │ [thinking]  │
   │ [response]  │ [response]  │ [response]  │
+  ├─────────────┼─────────────┼─────────────┤
+  │ confluence  │ still-lake  │ decomposer  │
+  │  (haiku)    │  (haiku)    │  (haiku)    │
   └─────────────┴─────────────┴─────────────┘
 ```
 
@@ -414,38 +443,45 @@ Each spring gets a pane. The user watches the water flow in real time. `tmux att
 trait LlmSource: Send + Sync
     complete(system, messages) → Result<String>
 
-ClaudeCliSource  -- stateless, spawns claude -p each time
-LlamaSource      -- stateless, HTTP POST each time
-TmuxPaneSource   -- persistent, sends to tmux pane, waits for sentinel
+ClaudeCliSource    -- stateless, spawns claude -p each time
+LlamaSource        -- stateless, HTTP POST each time
+TmuxPaneSource     -- persistent, sends to tmux window, waits for sentinel
+SystemPromptSource -- wraps TmuxPaneSource, prepends system prompt to each message
+                      (used by confluence, still lake, and decomposer whose
+                       system prompts change between calls)
 ```
 
 Stateless sources remain for testing and environments without tmux. The vessel is the natural home for real use -- when springs are wired through it, the system becomes observable.
 
 ### Session lifecycle
 
-The `Vessel` manages the tmux session:
+Each spring gets its own `TmuxVessel`, each vessel manages one tmux window:
 
 ```
-create(name):
-    create session if not running
-    configure with_command (the process each pane starts)
-    configure with_sentinel (the signal that means "ready")
+TmuxVessel::new(session, window, model)
+    .with_command(cmd)      -- the process this window runs
+    .with_sentinel(pattern) -- the signal that means "ready"
 
-prepare(springs):
-    for each spring:
-        create pane, start its configured process
-    return pane_id map (spring_name → tmux target)
+prepare():
+    create session/window if not running
+    start the configured process
+    (requires with_command -- the vessel must know its process)
 
-send(pane_target, input):
-    send keys to pane
+send(input):
+    if multiline (input_delimiter set):
+        write content to temp file, send the file path via send-keys
+        (pty buffer limits ~4096 bytes truncate paste-buffer; only the
+         short path travels through the pty, content through the filesystem)
+    else:
+        send-keys with literal input
     wait for sentinel in captured output
     extract response from full scrollback
 
 teardown():
-    kill session (or leave running for the user to inspect)
+    kill session
 ```
 
-Each spring receives a `TmuxPaneSource` backed by its pane. Because `TmuxPaneSource` implements `LlmSource`, the flow does not change -- the vessel connects through the trait, not through special plumbing.
+`build_tao_flow()` in `vessel/wiring.rs` assembles everything: creates the tmux session, builds a vessel per component (three springs, confluence, still lake, decomposer), wraps each in a `TmuxPaneSource`, and wires them into `TaoFlow`. Because `TmuxPaneSource` implements `LlmSource`, the flow does not change -- the vessel connects through the trait, not through special plumbing. Wrapper scripts decontaminate the environment (`env -u CLAUDECODE`, `--setting-sources ''`, `cd /tmp`) so that the host's CLAUDE.md and project context do not flavor the springs' water. Multiline sources use `TAOFLOW_SYSTEM_END` to separate system prompts from user content within the same file.
 
 ---
 
@@ -468,13 +504,14 @@ These tests require tmux but not Claude or llama.cpp. They run in CI.
 
 **Level 3: Full end-to-end tests.** Real tmux + real LLM providers. Mark as `#[ignore]` by default -- they are slow, require credentials, and cost money (or Claude Max subscription). Run manually or in a dedicated CI job.
 
-Verify:
-- A Droplet flows through desert and produces a coherent ocean
-- A Shower flows through two springs, the confluence weaves, the lake settles
-- A Downpour uses all three springs with real eddy detection and yielding
-- A Storm decomposes, sub-flows execute, higher confluence assembles
-- Vapor carries context across multiple flows (multi-turn conversation)
-- The vessel panes show the full conversation for each spring
+Five tiers verify the full spectrum:
+- **Tier 1 (Droplet):** desert spring alone produces a coherent ocean
+- **Tier 2 (Shower):** two springs flow, confluence weaves, lake settles
+- **Tier 3 (Downpour):** all three springs with real eddy detection and yielding
+- **Tier 4 (Storm):** decomposer breaks input into sub-questions, sub-flows execute through full watershed, higher confluence assembles — verified by capturing the decomposer pane and asserting sub-questions were produced, spring panes received multiple exchanges, and confluence wove at least once
+- **Tier 5 (Vapor):** multi-turn context carries across flows
+
+Each test captures a flow journal (`target/e2e-journals/`) — the layered record of every window's exchanges. The journal is a proto-pearl: it preserves the journey, not just the destination. When pearls arrive, they will capture this same structure at the library level, including nested pearls for Storm sub-flows.
 
 ### Property-based tests (future)
 
@@ -524,16 +561,18 @@ Pearl
   │     EDDY|Interpretive|persistence-mechanism|...
   │     EDDY|Structural|narrative-arc|...
   │
-  ├── Layer 3: Yielding (how divergences resolved)
-  │     persistence-mechanism: "Both paths are flow..."
-  │     narrative-arc: "Present as distinct names for one force..."
+  ├── Layer 3: Yielding (springs respond to each other)
+  │     Mountain, reading Forest on persistence: "The image serves, but..."
+  │     Forest, reading Mountain on persistence: "The structure is sound, and..."
+  │     persistence-mechanism: resolved (or: held in tension)
+  │     narrative-arc: resolved (or: held in tension)
   │
   ├── Layer 4: Merging (the river woven from streams)
   │     "Water does not try to be patient. That is its deepest teaching..."
   │
   ├── Layer 5: Settling (the lake clarifies)
   │     clarity: 0.65, depth: Deep
-  │     "The response was refined for wholeness and simplicity..."
+  │     six questions: clarity, wholeness, kindness, truth, simplicity, fidelity
   │
   └── Surface: the ocean (what the user received)
         "Water does not try to be patient..."
@@ -720,9 +759,10 @@ Errors are not failures -- they are eddies in the flow. A single `FlowError` typ
 - **SpringFailure** -- a spring failed to respond. The watershed continues; the remaining springs still flow.
 - **Drought** -- no springs produced water. Only when ALL springs fail does the system stop.
 - **ConfluenceFailure** -- the merge failed. The streams existed but could not be woven.
-- **ClarityFailure** -- the Still Lake failed to polish. (Phase 5)
-- **SourceError** -- the underlying LLM source (HTTP, CLI) failed.
-- **ConfigError** -- configuration loading failed.
+- **DecompositionFailure** -- Storm-level decomposition failed. Graceful degradation: single-pass handles the Storm.
+- **VesselFailure** -- the tmux vessel could not prepare, send, or capture. Carries the window name so the failing component is identifiable.
+
+*SettlingFailure was dropped: the Still Lake always degrades gracefully, returning the river content unchanged when settling fails. An error variant for a failure mode that was designed away is dead weight.*
 
 When a spring fails, the watershed filters it out and continues. A single dry spring does not dam the river. This resilience is natural to the architecture.
 

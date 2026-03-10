@@ -83,60 +83,20 @@ impl Watershed {
             Volume::Downpour | Volume::Storm => self.springs.iter().map(|s| s.as_ref()).collect(),
         }
     }
-
-    pub fn spring_count(&self) -> usize {
-        self.springs.len()
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_springs;
     use crate::water::Vapor;
-    use crate::watershed::source::mock::MockSource;
-    use crate::watershed::spring::SpringConfig;
-    use std::collections::HashMap;
-
-    fn test_mountain(response: &str) -> Box<dyn Spring> {
-        let mut affinities = HashMap::new();
-        affinities.insert("philosophy".into(), 0.9);
-        let config = SpringConfig {
-            name: "mountain".into(),
-            nature: "deep reasoning".into(),
-            affinities,
-        };
-        Box::new(MountainSpring::new(
-            config,
-            Box::new(MockSource::new(response)),
-        ))
-    }
-
-    fn test_desert(response: &str) -> Box<dyn Spring> {
-        let mut affinities = HashMap::new();
-        affinities.insert("quick_answers".into(), 0.9);
-        let config = SpringConfig {
-            name: "desert".into(),
-            nature: "speed, efficiency".into(),
-            affinities,
-        };
-        Box::new(DesertSpring::new(
-            config,
-            Box::new(MockSource::new(response)),
-        ))
-    }
-
-    #[tokio::test]
-    async fn watershed_with_two_springs() {
-        let watershed = Watershed::new(vec![
-            test_mountain("Deep answer."),
-            test_desert("Quick answer."),
-        ]);
-        assert_eq!(watershed.spring_count(), 2);
-    }
 
     #[tokio::test]
     async fn droplet_activates_only_desert() {
-        let watershed = Watershed::new(vec![test_mountain("Deep."), test_desert("Quick.")]);
+        let watershed = Watershed::new(vec![
+            test_springs::mountain("Deep."),
+            test_springs::desert("Quick."),
+        ]);
         let mut rain = Rain::new("hi", Vapor::default());
         let streams = watershed.receive_rain(&mut rain).await;
 
@@ -149,8 +109,8 @@ mod tests {
     #[tokio::test]
     async fn shower_activates_two_springs() {
         let watershed = Watershed::new(vec![
-            test_mountain("Deep analysis of the topic."),
-            test_desert("Quick answer."),
+            test_springs::mountain("Deep analysis of the topic."),
+            test_springs::desert("Quick answer."),
         ]);
         let mut rain = Rain::new(
             "Can you explain how async programming works in Rust?",
@@ -165,8 +125,8 @@ mod tests {
     #[tokio::test]
     async fn dry_springs_are_filtered() {
         let watershed = Watershed::new(vec![
-            test_mountain(""), // dry
-            test_desert("Quick answer."),
+            test_springs::mountain(""), // dry
+            test_springs::desert("Quick answer."),
         ]);
         let mut rain = Rain::new("Can you help me with something?", Vapor::default());
         let streams = watershed.receive_rain(&mut rain).await;

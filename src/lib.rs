@@ -1,6 +1,7 @@
 pub mod confluence;
 pub mod error;
 pub mod flow;
+pub mod pearl;
 pub mod still_lake;
 pub mod vessel;
 pub mod water;
@@ -9,8 +10,62 @@ pub mod watershed;
 pub use confluence::{ConfluencePool, Decomposer};
 pub use error::FlowError;
 pub use flow::TaoFlow;
+pub use pearl::Pearl;
 pub use still_lake::StillLake;
 pub use water::{Ocean, Rain, River, Stream, Vapor};
+
+#[cfg(test)]
+pub mod test_springs {
+    use crate::watershed::source::mock::MockSource;
+    use crate::watershed::spring::SpringConfig;
+    use crate::watershed::{DesertSpring, ForestSpring, MountainSpring, Spring};
+    use std::collections::HashMap;
+
+    pub fn mountain(response: &str) -> Box<dyn Spring> {
+        let mut affinities = HashMap::new();
+        affinities.insert("philosophy".into(), 0.9);
+        affinities.insert("architecture".into(), 0.8);
+        affinities.insert("analysis".into(), 0.7);
+        Box::new(MountainSpring::new(
+            SpringConfig {
+                name: "mountain".into(),
+                nature: "deep reasoning, analysis, architecture".into(),
+                affinities,
+            },
+            Box::new(MockSource::new(response)),
+        ))
+    }
+
+    pub fn desert(response: &str) -> Box<dyn Spring> {
+        let mut affinities = HashMap::new();
+        affinities.insert("quick_answers".into(), 0.9);
+        affinities.insert("formatting".into(), 0.7);
+        affinities.insert("code".into(), 0.6);
+        Box::new(DesertSpring::new(
+            SpringConfig {
+                name: "desert".into(),
+                nature: "speed, directness, efficiency".into(),
+                affinities,
+            },
+            Box::new(MockSource::new(response)),
+        ))
+    }
+
+    pub fn forest(response: &str) -> Box<dyn Spring> {
+        let mut affinities = HashMap::new();
+        affinities.insert("narrative".into(), 0.9);
+        affinities.insert("empathy".into(), 0.8);
+        affinities.insert("poetry".into(), 0.7);
+        Box::new(ForestSpring::new(
+            SpringConfig {
+                name: "forest".into(),
+                nature: "creativity, narrative, empathy".into(),
+                affinities,
+            },
+            Box::new(MockSource::new(response)),
+        ))
+    }
+}
 
 #[cfg(test)]
 mod tests {
