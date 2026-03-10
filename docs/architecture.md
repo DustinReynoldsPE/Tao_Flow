@@ -50,7 +50,7 @@ The system's architecture mirrors a natural watershed -- the path water takes fr
 The Earth layer is where raw generation happens. These are the LLMs that **do** -- that produce text, code, audio, images. They are the springs from which water first emerges.
 
 Three springs flow today, each with its own character:
-- **Mountain Spring** -- Deep reasoning (Opus). Slow, cold, mineral-rich. Best for complex analysis, philosophy, architecture.
+- **Mountain Spring** -- Deep reasoning (Sonnet). Slow, cold, mineral-rich. Best for complex analysis, philosophy, architecture.
 - **Forest Spring** -- Creative warmth (Sonnet). Organic, fertile. Best for narrative, poetry, empathy, ideation.
 - **Desert Spring** -- Speed and directness (Haiku). Quick, light, efficient. Best for simple tasks, translation, formatting.
 
@@ -166,7 +166,7 @@ User
 |                                                    |
 |  +----------+  +----------+  +----------+         |
 |  | Mountain |  |  Forest  |  |  Desert  |         |  <- Earth Layer
-|  |  (Opus)  |  | (Sonnet) |  | (Haiku)  |         |     (Body)
+|  | (Sonnet) |  | (Sonnet) |  | (Haiku)  |         |     (Body)
 |  +----+-----+  +----+-----+  +----+-----+         |
 |       |              |              |               |
 |       v              v              v               |

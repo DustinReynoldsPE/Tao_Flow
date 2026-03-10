@@ -95,9 +95,10 @@ This architecture provides:
 - **Resilience** -- tmux sessions survive terminal disconnects
 - **Debugging** -- switch to any spring's window to see its full conversation
 
-The `LlmSource` trait is the underground aquifer -- the hidden water source that feeds each spring. Two sources fill it:
-- `ClaudeCliSource` -- stateless `claude -p` calls (the default, the natural spring)
-- `LlamaSource` -- llama.cpp server via its OpenAI-compatible API (for local models)
+The `LlmSource` trait is the underground aquifer -- the hidden water source that feeds each spring. `TmuxPaneSource` fills it -- a persistent vessel-backed source that sends to a tmux pane and captures the response via sentinel detection. Three CLI backends generate the wrapper scripts that run inside each pane:
+- `CliBackend::Claude` -- `claude -p` invocations
+- `CliBackend::Crush` -- opencode `crush run` invocations
+- `CliBackend::Llama` -- HTTP POST to a running llama-server, parsed with `jq`
 
 **tmux is the vessel, not the source.** It provides the walls of the space each agent occupies. Each window allows the user to perceive the agent -- much like you can see the mountain outside of a window, but the window is not the mountain. The vessel carries the conversation naturally; the spring does not need to carry its own memory.
 
@@ -129,8 +130,6 @@ src/
     mineral_classifier.rs       # Keyword-based mineral extraction for spring affinity
     source/                     # The underground aquifer
       mod.rs                    # LlmSource trait + mock sources
-      claude_cli.rs             # claude -p invocations (stateless)
-      llama.rs                  # llama.cpp OpenAI-compatible API
       tmux_pane.rs              # Persistent vessel-backed source (TmuxPaneSource)
     springs/                    # Individual springs
       mountain.rs               # Deep reasoning
@@ -146,7 +145,8 @@ src/
 
   vessel/                       # The observable space where springs flow
     tmux.rs                     # TmuxVessel -- persistent spring sessions in tmux windows
-    wiring.rs                   # VesselConfig, build_tao_flow -- assembles the running system
+    wiring.rs                   # CliBackend, VesselConfig, build_tao_flow -- assembles the running system
+    config.rs                   # TOML configuration -- runtime backend, model, and tool selection
 
   still_lake/                   # Final refinement (the five questions)
 ```
@@ -322,7 +322,9 @@ System prompts are inline `const` strings within each spring and the confluence 
 
 ## Configuration
 
-Springs are currently configured in code -- each spring is constructed with a `SpringConfig` (name, nature, affinities) and an `LlmSource`. External configuration (YAML, environment) will emerge when the number of springs outgrows inline construction. Dependencies arrive when they carry water.
+`tao_flow.toml` configures the system at runtime -- backend selection (Claude, Crush, or Llama), per-spring model overrides, and tool configuration (allowed tools and MCP servers). All sections are optional; omit them to use backend defaults. Claude auto-discovers context-mode MCP if installed. The config file is loaded at startup; if absent, the system falls back to Claude defaults.
+
+Spring affinities (name, nature, mineral matching) remain in code -- they define the spring's character, not its operational parameters.
 
 ---
 
@@ -338,7 +340,7 @@ All work flows through branches. Main is the ocean floor -- stable, settled, tes
 Set up the Rust project. Define the water types. Implement the `Spring` trait. Write the first tests. The compiler is the first master. `cargo test` passes green. CI enforces the riverbanks on every push. Skills are defined: `/riverbank`, `/spring`, `/vessel`, `/still-lake`, `/rain`, `/confluence`, `/flow`.
 
 **Phase 2: Two Springs** *(complete)*
-Mountain and Desert implement the Spring trait. `ClaudeCliSource` uses `claude -p` -- the natural spring. `LlamaSource` connects to local llama.cpp servers. tmux sustains the vessel. Simple merge selects the deepest stream. Watershed dispatches concurrently.
+Mountain and Desert implement the Spring trait. `TmuxPaneSource` backs each spring through persistent tmux panes. Three CLI backends are supported: Claude (`claude -p`), Crush (`crush run`), and Llama (HTTP POST to llama-server). Simple merge selects the deepest stream. Watershed dispatches concurrently.
 
 **Phase 3: The Confluence** *(complete)*
 Forest Spring joins mountain and desert -- three streams now flow. The Confluence Pool weaves multiple perspectives into one river through an LLM integrator. Single streams pass through untouched (wu wei). `simple_merge` is dropped. The `/reflecting-pool` skill emerges -- the system learns to look inward.
@@ -365,7 +367,7 @@ The single-pass flow was complete and whole. Phase 6 deepened it. A Storm-level 
 
 **Minerals found their water.** `MineralClassifier` (keyword-based) populates rain with mineral tags. The affinity system in `SpringConfig::sense_relevance()` now has a production caller: Shower-volume activation selects the two most relevant springs by mineral-affinity matching. Three phases as a dry riverbed, now flowing.
 
-**Dead weight was dropped.** `Stream::clarity` (always 0.8, never read) and `Stream::depth` (calculated, never read) were removed. The `creation/` module dissolved into the recursive flow -- creation is what happens when Storm volume triggers the water cycle to cycle. The `config/` module was empty for six phases; inline configuration is enough.
+**Dead weight was dropped.** `Stream::clarity` (always 0.8, never read) and `Stream::depth` (calculated, never read) were removed. The `creation/` module dissolved into the recursive flow -- creation is what happens when Storm volume triggers the water cycle to cycle.
 
 **What was not built.** Yielding memory (springs remembering past yieldings across cycles), human pause points (boundaries between recursive cycles where the user can guide). These may emerge through use. The numbered phases end here -- the system grows organically from this point.
 
@@ -437,21 +439,24 @@ Each spring gets a pane. The user watches the water flow in real time. `tmux att
 
 ### How it connects
 
-`TmuxPaneSource` implements `LlmSource` -- the same trait that `ClaudeCliSource` and `LlamaSource` implement. Instead of spawning a one-shot `claude -p` process, it sends to a persistent tmux pane and captures the response. The spring does not know whether it is using a stateless CLI source or a persistent vessel-backed source. The architecture does not change. Only the underground aquifer deepens.
+`TmuxPaneSource` implements `LlmSource`. It sends to a persistent tmux pane and captures the response via sentinel detection. The spring does not know what runs inside the pane. `CliBackend` generates the wrapper scripts -- Claude, Crush, or Llama -- but the source layer sees only `send()` and `TAOFLOW_READY`.
 
 ```
 trait LlmSource: Send + Sync
     complete(system, messages) → Result<String>
 
-ClaudeCliSource    -- stateless, spawns claude -p each time
-LlamaSource        -- stateless, HTTP POST each time
 TmuxPaneSource     -- persistent, sends to tmux window, waits for sentinel
 SystemPromptSource -- wraps TmuxPaneSource, prepends system prompt to each message
                       (used by confluence, still lake, and decomposer whose
                        system prompts change between calls)
+
+CliBackend (generates what runs inside each pane):
+    Claude -- claude -p with --model, --system-prompt, --allowedTools, --mcp-config
+    Crush  -- crush run with --model, --quiet, --system-prompt
+    Llama  -- jq (build JSON) | HTTP POST (to llama-server) | jq (extract content)
 ```
 
-Stateless sources remain for testing and environments without tmux. The vessel is the natural home for real use -- when springs are wired through it, the system becomes observable.
+Mock sources (MockSource, EchoSource, DrySource) remain for unit tests. The vessel is the natural home for real use -- when springs are wired through it, the system becomes observable.
 
 ### Session lifecycle
 
