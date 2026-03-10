@@ -236,6 +236,26 @@ impl VesselConfig {
         }
     }
 
+    pub fn with_mountain_model(mut self, model: impl Into<String>) -> Self {
+        self.mountain_model = model.into();
+        self
+    }
+
+    pub fn with_desert_model(mut self, model: impl Into<String>) -> Self {
+        self.desert_model = model.into();
+        self
+    }
+
+    pub fn with_forest_model(mut self, model: impl Into<String>) -> Self {
+        self.forest_model = model.into();
+        self
+    }
+
+    pub fn with_utility_model(mut self, model: impl Into<String>) -> Self {
+        self.utility_model = model.into();
+        self
+    }
+
     pub fn with_default_tools(mut self, tools: ToolConfig) -> Self {
         self.default_tools = Some(tools);
         self
