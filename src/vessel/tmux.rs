@@ -257,7 +257,7 @@ impl TmuxVessel {
         // Wait for response
         let mut last_content = String::new();
         let mut stable_count = 0;
-        let max_wait = 60; // seconds
+        let max_wait = 300; // seconds — tool-using springs need patience
         let poll_interval = tokio::time::Duration::from_millis(500);
 
         for _ in 0..(max_wait * 2) {
