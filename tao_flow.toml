@@ -1,0 +1,55 @@
+session = "tao-flow"
+
+# Backend: "claude", "crush", or "llama"
+backend = "claude"
+
+# Llama backend settings (used when backend = "llama")
+# [llama]
+# base_url = "http://localhost:8080"
+
+# Model for each spring role. Defaults depend on backend.
+# Omit to use backend defaults.
+#
+# Claude defaults:
+#   mountain = "claude-sonnet-4-6"
+#   desert   = "claude-haiku-4-5-20251001"
+#   forest   = "claude-sonnet-4-6"
+#   utility  = "claude-haiku-4-5-20251001"
+#
+# Crush defaults:
+#   mountain = "anthropic/claude-sonnet-4-6"
+#   desert   = "anthropic/claude-haiku-4-5-20251001"
+#   forest   = "anthropic/claude-sonnet-4-6"
+#   utility  = "anthropic/claude-haiku-4-5-20251001"
+#
+# Llama — single server, one model (best all-rounder for 16GB):
+#   mountain = "qwen3.5-9b-q4_k_m"
+#   desert   = "qwen3.5-9b-q4_k_m"
+#   forest   = "qwen3.5-9b-q4_k_m"
+#   utility  = "qwen3.5-9b-q4_k_m"
+#
+# Llama — multi-server, differentiated by role:
+#   mountain = "qwen3.5-9b-q4_k_m"      # depth: highest quality, 14 tok/s, 5.8 GB
+#   desert   = "qwen3.5-4b-q8_0"         # speed: fast and light, 16 tok/s, 4.7 GB
+#   forest   = "ministral-8b-instruct-q5_k_m"  # narrative: best structure, 16 tok/s, 6.4 GB
+#   utility  = "qwen3.5-4b-q8_0"         # utility: fast, keeps overhead low
+#
+# [models]
+# mountain = "claude-sonnet-4-6"
+# desert = "claude-haiku-4-5-20251001"
+# forest = "claude-sonnet-4-6"
+# utility = "claude-haiku-4-5-20251001"
+
+# Default tools for all springs.
+# Claude auto-discovers context-mode MCP if installed.
+# Crush manages tools via crush.json (these fields are ignored).
+# Llama has no tool support.
+#
+# [tools]
+# allowed = ["WebSearch", "WebFetch"]
+# mcp_config = "/path/to/mcp-config.json"
+#
+# Per-spring tool overrides:
+# [tools.mountain]
+# allowed = ["WebSearch", "WebFetch"]
+# mcp_config = "/path/to/mcp-config.json"

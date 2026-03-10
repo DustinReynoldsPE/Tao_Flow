@@ -3,6 +3,7 @@
 //! The vessel is not the water — it is the window through
 //! which you see the mountain. Springs ride in vessels.
 
+pub mod config;
 pub mod tmux;
 pub mod wiring;
 
