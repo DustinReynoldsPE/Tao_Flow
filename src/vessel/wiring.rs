@@ -17,6 +17,7 @@ use crate::watershed::{
 
 pub const SENTINEL: &str = "TAOFLOW_READY";
 pub const INPUT_DELIMITER: &str = "TAOFLOW_INPUT_END";
+pub const SYSTEM_DELIMITER: &str = "TAOFLOW_SYSTEM_END";
 
 pub const DEFAULT_MOUNTAIN_MODEL: &str = "claude-sonnet-4-6";
 pub const DEFAULT_DESERT_MODEL: &str = "claude-haiku-4-5-20251001";
@@ -48,7 +49,9 @@ impl VesselConfig {
 ///
 /// Confluence and Still Lake change system prompts between calls
 /// (detect, yield, weave), so the prompt cannot be baked into the
-/// wrapper script. Instead, it is prepended to the user message.
+/// wrapper script. Instead, the system prompt is sent first, followed
+/// by TAOFLOW_SYSTEM_END, then the user content. The wrapper script
+/// extracts both and passes `--system-prompt` properly.
 struct SystemPromptSource {
     inner: TmuxPaneSource,
 }
@@ -62,15 +65,15 @@ impl LlmSource for SystemPromptSource {
             .map(|m| m.content.as_str())
             .unwrap_or("");
 
-        let embedded = if system.is_empty() {
+        let content = if system.is_empty() {
             last_content.to_string()
         } else {
-            format!("[System: {system}]\n\n{last_content}")
+            format!("{system}\n{SYSTEM_DELIMITER}\n{last_content}")
         };
 
         let new_messages = vec![ChatMessage {
             role: Role::User,
-            content: embedded,
+            content,
         }];
 
         self.inner.complete("", &new_messages).await
@@ -82,8 +85,9 @@ fn write_wrapper_script(session: &str, name: &str, model: &str, system_prompt: &
     let script_path = format!("/tmp/taoflow-{session}-{name}.sh");
     let escaped_prompt = system_prompt.replace('\'', "'\\''");
     let script = format!(
-        "#!/bin/bash\nwhile IFS= read -r line; do\n  \
+        "#!/bin/bash\ncd /tmp\nwhile IFS= read -r line; do\n  \
          echo \"$line\" | env -u CLAUDECODE claude -p --model {model} \
+         --setting-sources '' \
          --system-prompt $'{escaped_prompt}'\n  \
          echo \"{SENTINEL}\"\ndone\n"
     );
@@ -91,17 +95,59 @@ fn write_wrapper_script(session: &str, name: &str, model: &str, system_prompt: &
     script_path
 }
 
-/// Write a wrapper script that reads multi-line input terminated by a delimiter.
+/// Write a wrapper script that reads input from temp files.
+///
+/// The script reads file paths from stdin (one per line). Each file
+/// contains an optional system prompt followed by user content:
+///   system prompt lines...
+///   TAOFLOW_SYSTEM_END
+///   user content lines...
+///
+/// If no TAOFLOW_SYSTEM_END appears, all content is treated as user input.
+/// The file is deleted after processing.
+///
+/// This avoids the pty buffer limit (~4096 bytes) that truncates large
+/// inputs sent via paste-buffer. Only the short file path travels
+/// through the pty; the content travels through the filesystem.
 fn write_multiline_wrapper_script(session: &str, name: &str, model: &str) -> String {
     let script_path = format!("/tmp/taoflow-{session}-{name}.sh");
     let script = format!(
-        "#!/bin/bash\nwhile true; do\n  input=\"\"\n  while IFS= read -r line; do\n    \
-         [ \"$line\" = \"{INPUT_DELIMITER}\" ] && break\n    \
-         if [ -z \"$input\" ]; then\n      input=\"$line\"\n    else\n      \
-         input=\"$input\"$'\\n'\"$line\"\n    fi\n  done\n  \
-         [ -z \"$input\" ] && continue\n  \
-         echo \"$input\" | env -u CLAUDECODE claude -p --model {model}\n  \
-         echo \"{SENTINEL}\"\ndone\n"
+        r#"#!/bin/bash
+cd /tmp
+while IFS= read -r filepath; do
+  [ "$filepath" = "{INPUT_DELIMITER}" ] && continue
+  [ -z "$filepath" ] && continue
+  [ ! -f "$filepath" ] && continue
+  system=""
+  input=""
+  in_system=true
+  found_system=false
+  while IFS= read -r line; do
+    if $in_system && [ "$line" = "{SYSTEM_DELIMITER}" ]; then
+      in_system=false
+      found_system=true
+      continue
+    fi
+    if $in_system; then
+      if [ -z "$system" ]; then system="$line"; else system="$system"$'\n'"$line"; fi
+    else
+      if [ -z "$input" ]; then input="$line"; else input="$input"$'\n'"$line"; fi
+    fi
+  done < "$filepath"
+  if ! $found_system; then
+    input="$system"
+    system=""
+  fi
+  [ -z "$input" ] && continue
+  if [ -n "$system" ]; then
+    echo "$input" | env -u CLAUDECODE claude -p --model {model} --setting-sources '' --system-prompt "$system"
+  else
+    echo "$input" | env -u CLAUDECODE claude -p --model {model} --setting-sources ''
+  fi
+  rm -f "$filepath"
+  echo "{SENTINEL}"
+done
+"#
     );
     std::fs::write(&script_path, &script).expect("failed to write wrapper script");
     script_path

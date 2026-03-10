@@ -20,9 +20,11 @@ impl Decomposer {
             role: Role::User,
             content: format!(
                 "Break this complex request into 2-5 independent sub-questions. \
-                 Each sub-question should be answerable on its own and contribute \
-                 a distinct aspect to the whole. Together they should fully address \
-                 the original request.\n\n\
+                 Each sub-question will be answered by a separate system with NO \
+                 access to the other sub-questions. Each must name all subjects \
+                 explicitly — never use \"all three\", \"these\", or \"together\". \
+                 Do NOT include synthesis or comparison questions — synthesis \
+                 happens automatically after all sub-questions are answered.\n\n\
                  Original request: {}\n\n\
                  Return ONLY the sub-questions, one per line, prefixed with \"Q: \"",
                 input
@@ -49,10 +51,22 @@ impl Decomposer {
         let questions: Vec<String> = response
             .lines()
             .filter_map(|line| {
-                let trimmed = line.trim();
+                // Strip markdown bold/italic wrapping (e.g. **Q: text**)
+                let trimmed = line
+                    .trim()
+                    .trim_start_matches('*')
+                    .trim_end_matches('*')
+                    .trim();
                 trimmed
                     .strip_prefix("Q: ")
                     .or_else(|| trimmed.strip_prefix("Q:"))
+                    .or_else(|| {
+                        // Handle Q1:, Q2:, Q10:, etc.
+                        let rest = trimmed.strip_prefix('Q')?;
+                        let rest = rest.strip_prefix(|c: char| c.is_ascii_digit())?;
+                        let rest = rest.trim_start_matches(|c: char| c.is_ascii_digit());
+                        rest.strip_prefix(": ").or_else(|| rest.strip_prefix(':'))
+                    })
                     .map(|rest| rest.trim().to_string())
                     .filter(|q| !q.is_empty())
             })
@@ -84,8 +98,14 @@ impl Decomposer {
 
 const DECOMPOSER_SYSTEM_PROMPT: &str = "\
 You decompose complex requests into independent sub-questions. \
-Each sub-question should be self-contained and answerable on its own. \
-Together, the sub-questions should fully cover the original request. \
+Each sub-question will be answered by a separate system that has NO access \
+to the other sub-questions or their answers. Therefore: \
+1. Each sub-question must be fully self-contained — name all subjects, \
+   traditions, concepts, or entities explicitly. Never use references like \
+   \"all three\", \"these traditions\", \"the above\", or \"together\". \
+2. Do NOT include synthesis, comparison, or convergence questions. \
+   A separate stage handles synthesis after all sub-questions are answered. \
+3. Focus each sub-question on a distinct analytical angle. \
 Return 2-5 sub-questions, no more. Prefix each with \"Q: \".";
 
 #[cfg(test)]
@@ -161,5 +181,15 @@ mod tests {
 
         let result = Decomposer::parse_questions("1) First\n2) Second");
         assert_eq!(result.len(), 2);
+
+        let result = Decomposer::parse_questions("Q1: First\nQ2: Second\nQ3: Third");
+        assert_eq!(result.len(), 3);
+
+        let result = Decomposer::parse_questions("Q1:First\nQ2:Second");
+        assert_eq!(result.len(), 2);
+
+        let result = Decomposer::parse_questions("**Q: First question**\n**Q: Second question**");
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[0], "First question");
     }
 }

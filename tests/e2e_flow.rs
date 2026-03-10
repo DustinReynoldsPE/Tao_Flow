@@ -370,6 +370,16 @@ async fn droplet_flows_through_desert() {
         .expect("flow should produce an ocean");
 
     assert_ocean_clean(&result);
+
+    let pearl = tao.last_pearl().expect("droplet should form a pearl");
+    assert_eq!(pearl.core, "What is the Tao?");
+    assert_eq!(pearl.ocean, result);
+    assert!(
+        !pearl.streams.is_empty(),
+        "pearl should capture desert stream"
+    );
+    assert!(pearl.sub_pearls.is_empty(), "droplet has no sub-pearls");
+
     write_journal(session, "droplet", "What is the Tao?", &result).await;
 
     cleanup_session(session).await;
@@ -397,6 +407,13 @@ async fn shower_weaves_two_perspectives() {
         .expect("flow should produce an ocean");
 
     assert_ocean_clean(&result);
+
+    let pearl = tao.last_pearl().expect("shower should form a pearl");
+    assert_eq!(pearl.core, input);
+    assert_eq!(pearl.ocean, result);
+    assert!(pearl.river.is_some(), "shower pearl should have a river");
+    assert!(pearl.sub_pearls.is_empty(), "shower has no sub-pearls");
+
     write_journal(session, "shower", input, &result).await;
 
     cleanup_session(session).await;
@@ -432,6 +449,16 @@ async fn downpour_three_springs_merge() {
         "Downpour ocean should be substantive, got {} chars",
         result.len()
     );
+
+    let pearl = tao.last_pearl().expect("downpour should form a pearl");
+    assert_eq!(pearl.core, input);
+    assert_eq!(pearl.ocean, result);
+    assert!(
+        pearl.streams.len() >= 2,
+        "downpour should capture multiple streams"
+    );
+    assert!(pearl.river.is_some(), "downpour pearl should have a river");
+
     write_journal(session, "downpour", input, &result).await;
 
     cleanup_session(session).await;
@@ -484,7 +511,10 @@ async fn storm_decomposes_and_reassembles() {
     if !decomposer_exchanges.is_empty() {
         let response = &decomposer_exchanges[0].response;
         assert!(
-            response.contains("Q:") || response.contains("1.") || response.contains("1)"),
+            response.contains("Q:")
+                || response.contains("Q1")
+                || response.contains("1.")
+                || response.contains("1)"),
             "Decomposer should produce sub-questions, got: {}",
             &response[..response.len().min(200)]
         );
@@ -514,6 +544,33 @@ async fn storm_decomposes_and_reassembles() {
     eprintln!(
         "Confluence: {} exchanges (sub-flow merges + higher confluence)",
         confluence_exchanges.len()
+    );
+
+    // --- Verify pearl captures recursive structure ---
+    let pearl = tao.last_pearl().expect("storm should form a pearl");
+    assert_eq!(pearl.ocean, result);
+    assert!(
+        !pearl.sub_pearls.is_empty(),
+        "storm pearl should contain sub-pearls from decomposition"
+    );
+    assert!(
+        pearl.river.is_some(),
+        "storm pearl should have higher confluence river"
+    );
+
+    for (i, sub) in pearl.sub_pearls.iter().enumerate() {
+        assert!(!sub.core.is_empty(), "sub-pearl {} should have a core", i);
+        assert!(
+            !sub.ocean.is_empty(),
+            "sub-pearl {} should have an ocean",
+            i
+        );
+    }
+
+    eprintln!(
+        "Pearl: {} sub-pearls, river clarity {:.2}",
+        pearl.sub_pearls.len(),
+        pearl.river.as_ref().map(|r| r.clarity).unwrap_or(0.0)
     );
 
     write_journal(session, "storm", input, &result).await;
@@ -555,6 +612,11 @@ async fn vapor_carries_context_across_real_flows() {
         4,
         "Vapor should have 4 messages (2 exchanges)"
     );
+
+    // Pearl should reflect only the most recent flow
+    let pearl = tao.last_pearl().expect("vapor test should have a pearl");
+    assert_eq!(pearl.core, "What is my name?");
+    assert_eq!(pearl.ocean, second);
 
     let journal_ocean = format!("**Flow 1:** {first}\n\n**Flow 2:** {second}");
     write_journal(

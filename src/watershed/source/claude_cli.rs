@@ -56,7 +56,10 @@ impl LlmSource for ClaudeCliSource {
             .arg(&self.model)
             .arg("--system-prompt")
             .arg(system)
-            .env_remove("CLAUDECODE");
+            .arg("--setting-sources")
+            .arg("")
+            .env_remove("CLAUDECODE")
+            .current_dir("/tmp");
 
         // Pass the prompt via stdin
         cmd.stdin(std::process::Stdio::piped());

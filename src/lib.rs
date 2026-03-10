@@ -1,6 +1,7 @@
 pub mod confluence;
 pub mod error;
 pub mod flow;
+pub mod pearl;
 pub mod still_lake;
 pub mod vessel;
 pub mod water;
@@ -9,6 +10,7 @@ pub mod watershed;
 pub use confluence::{ConfluencePool, Decomposer};
 pub use error::FlowError;
 pub use flow::TaoFlow;
+pub use pearl::Pearl;
 pub use still_lake::StillLake;
 pub use water::{Ocean, Rain, River, Stream, Vapor};
 

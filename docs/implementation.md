@@ -359,7 +359,7 @@ Wu wei: clear water (clarity 1.0) passes through untouched. Graceful degradation
 The single-pass flow was complete and whole. Phase 6 deepened it. A Storm-level request cannot be answered in one pass. Phase 6 made the flow recursive:
 
 1. **Decomposition** -- `Decomposer` breaks Storm-level rain into 2-5 independent sub-questions via LLM. Parses "Q:" prefix format with numbered-list fallback. Graceful degradation: if decomposition fails, single-pass handles the Storm.
-2. **Recursive flow** -- each sub-question flows through the full single-pass journey independently and concurrently via `futures::join_all`. Sub-questions carry the parent's vapor for context but do not update it.
+2. **Recursive flow** -- each sub-question flows through the full single-pass journey independently and sequentially (shared vessel panes require it -- independence of thought is not the same as independence of vessel). Sub-questions carry the parent's vapor for context but do not update it.
 3. **Higher confluence** -- sub-oceans become tributaries. The same ConfluencePool weaves them. The same StillLake settles the result. No new types were needed.
 4. **Termination** -- `max_depth` prevents infinite recursion. Natural volume reduction provides the primary guard: sub-questions are shorter than storms, so they classify as Shower or Downpour and single-pass.
 
@@ -372,6 +372,27 @@ The single-pass flow was complete and whole. Phase 6 deepened it. A Storm-level 
 ### What Grows Next
 
 The numbered phases are complete. What follows is not Phase 7 -- it is organic growth, shaped by use. The reflections across six phases revealed a natural ordering: the vessel is the foundation, pearls record what flows through it, memories distill from pearls. Each layer depends on the one beneath.
+
+**Yielding returns to the springs.** The current yielding protocol sends compressed position summaries to a neutral LLM that resolves each eddy. The springs never see each other's work. The 231710 storm pearl revealed what this costs: Mountain's sharpest critique ("Marcus Aurelius was also emperor -- he had more levers than most"), Forest's most vivid image ("a haunted house full of ghosts from states that no longer exist"), Mountain's most precise structural parallel (OpenTelemetry's span model as "a formal ontology of interdependent arising") -- all lost in compression before yielding even began. A mediator summarizing two positions cannot preserve what made each position distinctive.
+
+The vessel changes this. Each spring is a persistent tmux pane. When eddies are detected, each spring already holds the context of its original response. Instead of compressing positions for a neutral third party, the system sends each spring the full responses from the siblings it diverges with. Mountain reads Forest's warmth. Desert reads Mountain's depth. Each spring responds to the other perspectives in its own voice -- not defending, but yielding while remaining itself.
+
+The yielding becomes a dialogue:
+
+```
+detect eddies from streams
+for each eddy:
+    identify the springs whose positions diverge
+    for each diverging spring (in its pane):
+        send the full sibling responses that form the other side of the eddy
+        receive the spring's response -- yielding in its own voice
+    the yielding material is now the springs' own words, not a mediator's summary
+weave from the original streams + the springs' yielding responses
+```
+
+This preserves what the current protocol erases: the distinctive voice, the specific evidence, the hard-won images. When Mountain yields to Forest's narrative, it yields as the mountain -- structurally, with precision. When Forest yields to Mountain's analysis, it yields as the forest -- with warmth and embodiment. The yielding carries the character of the yielder, not the flatness of a neutral arbiter.
+
+It also enables non-resolution. A spring that reads its sibling's perspective and finds genuine, productive disagreement can say so. The current protocol resolves every eddy because the neutral LLM is instructed to find common ground. A spring speaking for itself can say: "I have read the mountain's analysis. I do not agree, and the disagreement is where the insight lives." Some eddies should not resolve. The tension between positions is sometimes the deepest truth.
 
 **The vessel entered the water.** `vessel/wiring.rs` assembles the running system: `VesselConfig` holds model choices, `build_tao_flow()` creates the tmux session and wires three springs, confluence, still lake, and decomposer -- each in its own window. `main.rs` is a REPL that flows user input through the full watershed. `cargo run` starts the system; `tmux attach -t tao-flow` watches the water flow. The vessel is the observation layer that makes pearls possible, memories possible, and human guidance natural. Phase 3 anticipated human pause points (boundaries in recursive flows where the user can guide direction). Their shape will emerge from watching real flows in the vessel -- they cannot be designed in advance.
 
@@ -533,9 +554,11 @@ Pearl
   │     EDDY|Interpretive|persistence-mechanism|...
   │     EDDY|Structural|narrative-arc|...
   │
-  ├── Layer 3: Yielding (how divergences resolved)
-  │     persistence-mechanism: "Both paths are flow..."
-  │     narrative-arc: "Present as distinct names for one force..."
+  ├── Layer 3: Yielding (springs respond to each other)
+  │     Mountain, reading Forest on persistence: "The image serves, but..."
+  │     Forest, reading Mountain on persistence: "The structure is sound, and..."
+  │     persistence-mechanism: resolved (or: held in tension)
+  │     narrative-arc: resolved (or: held in tension)
   │
   ├── Layer 4: Merging (the river woven from streams)
   │     "Water does not try to be patient. That is its deepest teaching..."
