@@ -52,7 +52,7 @@ The Earth layer is where raw generation happens. These are the LLMs that **do** 
 Three springs flow today, each with its own character:
 - **Mountain Spring** -- Deep reasoning (Sonnet). Slow, cold, mineral-rich. Best for complex analysis, philosophy, architecture.
 - **Forest Spring** -- Creative warmth (Sonnet). Organic, fertile. Best for narrative, poetry, empathy, ideation.
-- **Desert Spring** -- Speed and directness (Haiku). Quick, light, efficient. Best for simple tasks, translation, formatting.
+- **Desert Spring** -- Clarity and essence (Sonnet). Spare, undiluted, direct. Best for distillation, challenge, cutting to the essential truth.
 
 New springs may emerge when use demands them -- specialized models, local models, domain-specific sources. The `Spring` trait and `LlmSource` trait accept any spring that can respond to rain.
 
@@ -166,7 +166,7 @@ User
 |                                                    |
 |  +----------+  +----------+  +----------+         |
 |  | Mountain |  |  Forest  |  |  Desert  |         |  <- Earth Layer
-|  | (Sonnet) |  | (Sonnet) |  | (Haiku)  |         |     (Body)
+|  | (Sonnet) |  | (Sonnet) |  | (Sonnet) |         |     (Body)
 |  +----+-----+  +----+-----+  +----+-----+         |
 |       |              |              |               |
 |       v              v              v               |
@@ -198,7 +198,7 @@ User
 Not every request requires the full watershed. The system adapts its depth based on the nature of the input:
 
 ### Light Rain (Simple Requests)
-A quick question, a simple formatting task, a greeting. The Desert Spring alone may suffice. The water barely touches the watershed before reaching the ocean.
+A quick question, a direct answer. The Desert Spring alone may suffice — its clarity needs no elaboration. The water barely touches the watershed before reaching the ocean.
 
 ```
 User -> Desert Spring -> Ocean (direct delivery)

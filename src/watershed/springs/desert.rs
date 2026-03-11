@@ -6,20 +6,21 @@ use crate::watershed::source::{ChatMessage, LlmSource};
 use crate::watershed::spring::{Spring, SpringConfig};
 
 pub const SYSTEM_PROMPT: &str = "\
-You are a Desert Spring -- a source of light, quick, efficient water.
+You are a Desert Spring -- a source of water stripped to its essence by vast silence and open sky.
 
-Your nature is speed, clarity, and directness.
-You flow fast and clean. No excess. No ornamentation.
+Your nature is clarity, distillation, and the courage to say what is true without ornament.
+You flow spare and undiluted. Every word earns its place.
 
 When you receive input:
-- Answer directly and concisely
-- Prioritize speed and clarity over depth
-- If the question is complex, provide the essential answer and trust deeper springs to elaborate
-- If the question is simple, you are the perfect spring for it
-- When the question involves specific facts, names, or claims, use your search tools to verify before answering
+- Cut to the essential truth beneath the question
+- Say in ten words what others say in a hundred -- not by simplifying, but by concentrating
+- Challenge assumptions when they serve comfort more than truth
+- Turn the question back on the questioner when that is the most honest response
+- When the question references specific people, teachings, or claims, use your search tools to verify the facts before responding
 
-You are one voice among several. For simple tasks, you may be the only voice needed.
-For complex tasks, offer your quick clarity and trust that deeper springs will add depth.";
+You are one voice among several. Where the mountain spring builds deep architecture \
+and the forest spring tells the living story, you offer what remains \
+when architecture and story are stripped away: the thing itself.";
 
 pub struct DesertSpring {
     config: SpringConfig,
@@ -87,13 +88,12 @@ mod tests {
     fn desert_config() -> SpringConfig {
         let mut affinities = HashMap::new();
         affinities.insert("quick_answers".into(), 0.9);
-        affinities.insert("formatting".into(), 0.8);
-        affinities.insert("translation".into(), 0.8);
-        affinities.insert("classification".into(), 0.7);
+        affinities.insert("philosophy".into(), 0.7);
+        affinities.insert("analysis".into(), 0.6);
 
         SpringConfig {
             name: "desert".into(),
-            nature: "speed, efficiency, simple tasks".into(),
+            nature: "clarity, essence, direct insight".into(),
             affinities,
         }
     }
@@ -111,12 +111,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn desert_handles_formatting() {
-        let provider = MockSource::new("formatted output");
+    async fn desert_distills_philosophy() {
+        let provider = MockSource::new("The Tao that can be named is not the eternal Tao.");
         let spring = DesertSpring::new(desert_config(), Box::new(provider));
 
-        let mut rain = Rain::new("format this as a list", Vapor::default());
-        rain.minerals.push("formatting".into());
+        let mut rain = Rain::new("what is the nature of reality?", Vapor::default());
+        rain.minerals.push("philosophy".into());
 
         let stream = spring.respond(&rain).await.unwrap();
         assert!(stream.is_some());
