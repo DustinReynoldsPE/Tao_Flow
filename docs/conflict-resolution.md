@@ -198,7 +198,7 @@ The protocol described above is the riverbed. But the water will flow in ways we
 
 **Forest Stream (GPT-4o):** "JavaScript, because beginners can see results immediately in the browser, which sustains motivation."
 
-**Desert Stream (Haiku):** "Python."
+**Desert Stream (Sonnet):** "Python. The question answers itself — the language named after a comedy troupe that valued clarity above all."
 
 **Eddy detected:** Interpretive disagreement between Mountain and Forest on Python vs JavaScript.
 

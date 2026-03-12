@@ -57,10 +57,10 @@ The Still Lake is the final refinement. It asks six questions of the river befor
                     │         tmux session: tao-flow      │
                     │                                     │
                     │  mountain │  desert  │   forest     │
-                    │  (sonnet) │  (haiku) │  (sonnet)    │
+                    │  (sonnet) │ (sonnet) │  (sonnet)    │
                     │           │          │              │
                     │  confluence│ still-lake│ decomposer  │
-                    │  (haiku)  │  (haiku) │  (haiku)     │
+                    │  (sonnet) │ (sonnet) │  (sonnet)    │
                     └─────────────────────────────────────┘
                                     │
                               the vessel

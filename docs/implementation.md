@@ -81,11 +81,11 @@ The low place that people disdain is the CLI that's already on the machine. A Cl
 ```
 tmux session: tao-flow
   window: mountain    (claude --model sonnet, persistent)
-  window: desert      (claude --model haiku, persistent)
+  window: desert      (claude --model sonnet, persistent)
   window: forest      (claude --model sonnet, persistent)
-  window: confluence  (claude --model haiku, utility)
-  window: still-lake  (claude --model haiku, utility)
-  window: decomposer  (claude --model haiku, utility)
+  window: confluence  (claude --model sonnet, utility)
+  window: still-lake  (claude --model sonnet, utility)
+  window: decomposer  (claude --model sonnet, utility)
 ```
 
 This architecture provides:
@@ -425,13 +425,13 @@ The vessel makes the journey visible. It is the foundation of the system's next 
 tmux session: tao-flow
   ┌─────────────┬─────────────┬─────────────┐
   │  mountain   │   desert    │   forest    │
-  │  (sonnet)   │   (haiku)   │   (sonnet)  │
+  │  (sonnet)   │  (sonnet)   │   (sonnet)  │
   │             │             │             │
   │ [prompt]    │ [prompt]    │ [prompt]    │
   │ [response]  │ [response]  │ [response]  │
   ├─────────────┼─────────────┼─────────────┤
   │ confluence  │ still-lake  │ decomposer  │
-  │  (haiku)    │  (haiku)    │  (haiku)    │
+  │  (sonnet)   │  (sonnet)   │  (sonnet)   │
   └─────────────┴─────────────┴─────────────┘
 ```
 
