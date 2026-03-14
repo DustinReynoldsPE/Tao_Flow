@@ -5,6 +5,10 @@
 
 ---
 
+## Current status
+
+The system produces 3 uniqueish voices, but the finer points of each are diminished when merged into one voice.  The three voices are each using the same LLM, so future versions of this could use different LLMs.  I found that each of the three streams outputs were good by themselves, each with a different way of answering the questions.
+
 ## What Is This?
 
 This is the design of a multi-LLM system that flows like water. It does not force. It does not contend. It finds the path of least resistance and, in doing so, accomplishes everything.
