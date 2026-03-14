@@ -116,6 +116,7 @@ src/
   lib.rs                        # Library root -- re-exports
   flow.rs                       # TaoFlow -- Rain to Ocean (single-pass and recursive)
   error.rs                      # FlowError
+  pearl.rs                      # Pearl -- layered record of each flow (the observation layer)
 
   water/                        # The water types (compiler-enforced lifecycle)
     vapor.rs                    # Context carried between flows
@@ -545,45 +546,48 @@ Every flow through the system — from rain to ocean — produces a pearl. The p
 
 ```
 .storms/
-  2024-03-08-patience-and-persistence.pearl
-  2024-03-08-what-is-the-tao.pearl
-  2024-03-09-taoism-vs-stoicism.pearl
+  patience-and-persistence-20240308-143022/
+    core.md          # the question, nothing else
+    streams/         # each spring's voice, unmodified
+      mountain.md
+      desert.md
+    river.md         # YAML frontmatter (clarity, tributaries, eddies) + woven content
+    ocean.md         # what the user received
+    sub-pearls/      # nested folders for Storm decomposition (if any)
+      01-sub-question/
+        core.md
+        streams/
+        ...
+    pearl.json       # full structured data for programmatic access
 ```
 
-Each pearl contains every layer of the journey, from core to surface:
+Each pearl preserves every layer of the journey, from core to surface:
 
 ```
-Pearl
+Pearl folder
   │
-  ├── Core: the original query (rain)
+  ├── core.md: the original query (rain)
   │     "How does water teach us about patience and persistence?"
   │
-  ├── Layer 1: Spring responses (streams)
-  │     Mountain: "Water does not try to be patient..."
-  │     Desert:   "Water teaches patience through its nature..."
+  ├── streams/: spring responses before merging
+  │     mountain.md: "Water does not try to be patient..."
+  │     desert.md:   "Water teaches patience through its nature..."
   │
-  ├── Layer 2: Eddy detection (where perspectives diverged)
-  │     EDDY|Interpretive|persistence-mechanism|...
-  │     EDDY|Structural|narrative-arc|...
-  │
-  ├── Layer 3: Yielding (springs respond to each other)
-  │     Mountain, reading Forest on persistence: "The image serves, but..."
-  │     Forest, reading Mountain on persistence: "The structure is sound, and..."
-  │     persistence-mechanism: resolved (or: held in tension)
-  │     narrative-arc: resolved (or: held in tension)
-  │
-  ├── Layer 4: Merging (the river woven from streams)
-  │     "Water does not try to be patient. That is its deepest teaching..."
-  │
-  ├── Layer 5: Settling (the lake clarifies)
+  ├── river.md: the merged output (carries eddies, clarity, tributaries)
   │     clarity: 0.65, depth: Deep
-  │     six questions: clarity, wholeness, kindness, truth, simplicity, fidelity
+  │     five questions: clarity, wholeness, kindness, truth, simplicity
   │
-  └── Surface: the ocean (what the user received)
-        "Water does not try to be patient..."
+  ├── ocean.md: what the user received
+  │     "Water does not try to be patient..."
+  │
+  ├── sub-pearls/: nested pearl folders (Storm decomposition only)
+  │     01-sub-question/  (each a complete pearl)
+  │     02-sub-question/
+  │
+  └── pearl.json: full structured data
 ```
 
-The user opens a pearl and reads from core to surface — seeing exactly how their question was transformed at each stage. Or they read from surface to core — starting with the final answer and drilling into the reasoning that produced it.
+The user opens a pearl folder and reads from core to ocean — seeing exactly how their question was transformed at each stage. Or they read from ocean to core — starting with the final answer and drilling into the reasoning that produced it.
 
 ### The relationship between pearls and memories
 
