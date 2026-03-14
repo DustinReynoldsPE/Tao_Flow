@@ -52,8 +52,8 @@ Create a configuration that connects springs to TmuxPaneSource instances:
 
 ```
 TaoFlow configured with:
-    Mountain → TmuxPaneSource (vessel: "tao-flow", pane: "mountain", model: opus)
-    Desert   → TmuxPaneSource (vessel: "tao-flow", pane: "desert",   model: haiku)
+    Mountain → TmuxPaneSource (vessel: "tao-flow", pane: "mountain", model: sonnet)
+    Desert   → TmuxPaneSource (vessel: "tao-flow", pane: "desert",   model: sonnet)
     Forest   → TmuxPaneSource (vessel: "tao-flow", pane: "forest",  model: sonnet)
     Confluence → TmuxPaneSource (weaving, multiline wrapper)
     StillLake  → TmuxPaneSource (settling, multiline wrapper)

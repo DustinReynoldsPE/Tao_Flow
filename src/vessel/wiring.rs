@@ -46,15 +46,15 @@ impl CliBackend {
         match self {
             Self::Claude => (
                 "claude-sonnet-4-6",
-                "claude-haiku-4-5-20251001",
                 "claude-sonnet-4-6",
-                "claude-haiku-4-5-20251001",
+                "claude-sonnet-4-6",
+                "claude-sonnet-4-6",
             ),
             Self::Crush => (
                 "anthropic/claude-sonnet-4-6",
-                "anthropic/claude-haiku-4-5-20251001",
                 "anthropic/claude-sonnet-4-6",
-                "anthropic/claude-haiku-4-5-20251001",
+                "anthropic/claude-sonnet-4-6",
+                "anthropic/claude-sonnet-4-6",
             ),
             Self::Llama { model, .. } => (model, model, model, model),
         }
@@ -443,12 +443,12 @@ fn vessel_mountain(config: &VesselConfig) -> Box<dyn Spring> {
 fn vessel_desert(config: &VesselConfig) -> Box<dyn Spring> {
     let mut affinities = HashMap::new();
     affinities.insert("quick_answers".into(), 0.9);
-    affinities.insert("formatting".into(), 0.7);
-    affinities.insert("code".into(), 0.6);
+    affinities.insert("philosophy".into(), 0.7);
+    affinities.insert("analysis".into(), 0.6);
     Box::new(DesertSpring::new(
         SpringConfig {
             name: "desert".into(),
-            nature: "speed, directness, efficiency".into(),
+            nature: "clarity, essence, direct insight".into(),
             affinities,
         },
         vessel_source(

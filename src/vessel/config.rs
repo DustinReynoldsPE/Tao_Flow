@@ -152,7 +152,7 @@ mod tests {
     fn claude_backend_is_default() {
         let toml: TomlConfig = toml::from_str("").unwrap();
         let config = toml.into_vessel_config();
-        assert_eq!(config.desert_model, "claude-haiku-4-5-20251001");
+        assert_eq!(config.desert_model, "claude-sonnet-4-6");
     }
 
     #[test]
